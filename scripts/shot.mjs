@@ -1,0 +1,12 @@
+import { chromium } from 'playwright-core';
+const [,, page = 'overview', out = 'shot', extra = '', h = '2400'] = process.argv;
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell', args: ['--no-sandbox'] });
+const p = await browser.newPage({ viewport: { width: 1600, height: Number(h) }, colorScheme: extra.includes('dark') ? 'dark' : 'light' });
+const errors = [];
+p.on('pageerror', (e) => errors.push(e.message));
+p.on('console', (m) => m.type() === 'error' && !m.text().includes('defaultProps') && errors.push(m.text().slice(0, 300)));
+await p.goto(`http://127.0.0.1:5173/#/${page}`);
+await p.waitForTimeout(1200);
+await p.screenshot({ path: `.screenshots/${out}.png`, fullPage: true });
+console.log('errors:', errors.slice(0, 5));
+await browser.close();
