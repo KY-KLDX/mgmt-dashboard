@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p . && vite build",
-    "build:single": "tsc -p . && vite build --mode single",
+    "build:single": "tsc -p . && vite build --mode single && node scripts/prepare-artifact.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -p .",
-    "verify:data": "tsx scripts/verify-data.ts"
+    "verify:data": "tsx scripts/verify-data.ts",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.441.0",
