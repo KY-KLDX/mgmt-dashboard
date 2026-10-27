@@ -4,8 +4,8 @@ import type { Period } from '../period';
 
 /** Point-in-time comparison date for stock measures (counts and balances). */
 export function compareDate(p: Period): { at: string; label: string } {
-  if (p.compare) return { at: p.compare.end, label: `vs ${p.compare.label}` };
-  return { at: addDays(p.start, -1), label: 'vs start of year' };
+  if (p.compare) return { at: p.compare.end, label: p.compare.short };
+  return { at: addDays(p.start, -1), label: 'vs 1 Jan' };
 }
 
 /** Tranche active at a date: opened and not yet matured. */

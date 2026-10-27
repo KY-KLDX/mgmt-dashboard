@@ -30,12 +30,18 @@ React 18 · TypeScript (strict) · Vite · Tailwind CSS · Recharts · lucide-re
 
 ## Pages
 
-1. **Executive Overview**: six KPIs, cross-domain *Management attention required* list, financial trend, tranche snapshot, investor health, upcoming obligations.
-2. **Finance & Tranches**: seven KPIs, clickable tranche pipeline, filterable tranche table, tranche drawer with the revenue formula, monthly company P&L (month detail and 12-month views).
-3. **Investors**: lifecycle funnel (CTOS and KYC as separate stages), value bands, three rankings plus an onboarding/exceptions view, investor drawer, definitions.
-4. **Issuers & Obligations**: seven KPIs, 30/60/90-day timeline, obligations table, issuer drawer.
-5. **Technology & Cyber Risk**: business-impact incident table, top five risks with a linked 5×5 matrix, resilience and availability measures.
-6. **Governance & Management Actions**: five tabs (My Actions, CEO & Management, Board Pipeline, Policies & Applications, All), workflow with skippable stages, and limited editing with a confirmation step and activity history.
+Each page shows at most four KPI cards. Supporting detail sits behind the (i) icon on each card.
+
+1. **Executive Overview** is a one-glance screen: Subscriptions, Revenue, Active investors and Critical items, plus the top five items needing a decision (or, on the Upcoming tab, the top five upcoming items).
+2. **Finance & Tranches**: tranche pipeline, filterable tranche table, monthly subscriptions, monthly company P&L.
+3. **Investors**: onboarding funnel (CTOS and KYC as separate stages), value bands, investor rankings and exceptions.
+4. **Issuers & Obligations**: 30/60/90-day timeline and obligations table.
+5. **Technology & Cyber Risk**: incidents, top five risks with a linked risk matrix, resilience measures.
+6. **Governance & Management Actions**: My Actions, CEO & SMT, Board, Policies & applications, All.
+
+Detail drawers open on a single "Issue / Next / Blocked" line and the key facts. Everything else is folded into sections you expand on demand. Governance editing sits behind the **Update** button.
+
+Synthetic data is marked once, by the badge in the top bar. Definitions and caveats live in the metric dictionary (book icon) and in the (i) tooltips.
 
 ## Data model (`src/data`)
 

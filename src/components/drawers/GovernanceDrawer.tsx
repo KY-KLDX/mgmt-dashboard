@@ -6,7 +6,7 @@ import { date, dateTime, relDays } from '../../lib/format';
 import { CLOSED_STAGES, govDueState, govOverdue } from '../../lib/selectors/ops';
 import { useApp } from '../../state/AppState';
 import { StatusBadge, toneFor } from '../ui/Badge';
-import { Drawer, DrawerSection } from '../ui/Drawer';
+import { Drawer, DrawerSection, NeedsLine } from '../ui/Drawer';
 import { Button, Field, Modal, Progress } from '../ui/Primitives';
 
 export const OWNERS = [
@@ -47,7 +47,8 @@ export function GovernanceDrawer({ id, onClose }: { id: string; onClose: () => v
   const [nextAction, setNextAction] = useState(g?.nextAction ?? '');
   const [link, setLink] = useState('');
   const [pending, setPending] = useState<GovStage | null>(null);
-  useEffect(() => { setNextAction(g?.nextAction ?? ''); setComment(''); setLink(''); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { setNextAction(g?.nextAction ?? ''); setComment(''); setLink(''); setEditing(false); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!g) return null;
 
   const update = (patch: Partial<GovItem>, log: string, msg: string) => {
@@ -63,44 +64,28 @@ export function GovernanceDrawer({ id, onClose }: { id: string; onClose: () => v
   const d = daysFromAsOf(g.targetDate);
 
   return (
-    <Drawer open onClose={onClose} title={g.title} eyebrow={`${g.category} · ${g.id}`} width="max-w-[720px]"
+    <Drawer open onClose={onClose} title={g.title} eyebrow={`${g.id} · ${g.category}`}
       headerExtra={<>
         <StatusBadge status={g.stage} />
         <StatusBadge status={due} tone={toneFor(due)} />
-        <StatusBadge status={`${g.priority} priority`} tone={g.priority === 'High' ? 'warn' : 'mute'} />
         {g.blocker && <StatusBadge status="Blocked" tone="crit" />}
+        <Button size="sm" variant={editing ? 'secondary' : 'primary'} onClick={() => setEditing((v) => !v)}>{editing ? 'Done' : 'Update'}</Button>
       </>}>
-      <DrawerSection title="Requirement">
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-          <Field label="Required governance body">{g.body}</Field>
-          <Field label="Required action">{g.actionType}</Field>
-          <Field label="Accountable owner">{g.owner}</Field>
-          <Field label="Supporting department">{g.supportingDept}</Field>
-          <Field label="Target meeting / submission"><span className="num">{date(g.targetDate)}</span><br /><span className={`text-[12px] ${govOverdue(g) ? 'text-crit' : 'text-ink-3'}`}>{CLOSED_STAGES.includes(g.stage) ? `Completed ${date(g.completedOn)}` : relDays(d)}</span></Field>
-          <Field label="Internal preparation deadline"><span className="num">{date(g.prepDeadline)}</span></Field>
-          {g.boardMeeting && <Field label="Board meeting / circulation">{g.boardMeeting}</Field>}
-        </dl>
-        <div className="mt-4">
-          <div className="mb-1 flex justify-between text-[12px] text-ink-3"><span>Readiness</span><span className="num">{g.readiness}%</span></div>
-          <Progress value={g.readiness / 100} tone={g.readiness >= 80 ? 'good' : g.readiness >= 50 ? 'accent' : 'warn'} label="Readiness" />
-        </div>
-      </DrawerSection>
+      {g.blocker ? <NeedsLine label="Blocked" text={g.blocker} tone="crit" /> : <NeedsLine label="Next" text={g.nextAction} tone={govOverdue(g) ? 'crit' : 'mute'} />}
 
-      <DrawerSection title="Workflow"><Workflow g={g} />
-        {g.skips.length > 0 && <p className="mt-2 text-[12px] text-ink-3">Stages struck through are not required for this item.</p>}
-      </DrawerSection>
-
-      <DrawerSection title="Status, blocker and next action">
-        <dl className="grid grid-cols-1 gap-3">
-          <Field label="Latest update">{g.latestUpdate}</Field>
-          {g.blocker && <Field label="Blocker"><span className="text-crit">{g.blocker}</span></Field>}
-          {g.dependencies.length > 0 && <Field label="Dependencies">{g.dependencies.join(' · ')}</Field>}
-          {g.policy && <Field label="Policy">Version {g.policy.version} · last reviewed {date(g.policy.lastReview)} · next review {date(g.policy.nextReview)}<br /><span className="text-ink-3">{g.policy.proposedChanges} · {g.policy.requirementRef}</span></Field>}
-          {g.application && <Field label="Application">{g.application.applicationType} to {g.application.authority} · approval required: {g.application.approvalRequired}<br /><span className="text-ink-3">Missing information: {g.application.missingInfo ?? 'None'}</span></Field>}
+      <DrawerSection title="Key facts">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+          <Field label="Needs">{g.actionType} by {g.body}</Field>
+          <Field label="Owner">{g.owner}</Field>
+          <Field label="Due"><span className="num">{date(g.targetDate)}</span> <span className={`text-[12px] ${govOverdue(g) ? 'text-crit' : 'text-ink-3'}`}>{CLOSED_STAGES.includes(g.stage) ? `· done ${date(g.completedOn)}` : `· ${relDays(d)}`}</span></Field>
+          <Field label="Readiness">
+            <span className="num">{g.readiness}%</span>
+            <span className="mt-1 block"><Progress value={g.readiness / 100} tone={g.readiness >= 80 ? 'good' : g.readiness >= 50 ? 'accent' : 'warn'} label="Readiness" /></span>
+          </Field>
         </dl>
       </DrawerSection>
 
-      <DrawerSection title="Update this item (demo)">
+      {editing && <DrawerSection title="Update (demo, not saved)">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label htmlFor="g-stage" className="flex flex-col gap-1 text-[12px] text-ink-3">Workflow stage
             <select id="g-stage" value={g.stage} onChange={(e) => onStage(e.target.value as GovStage)} className="h-9 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink">
@@ -140,9 +125,23 @@ export function GovernanceDrawer({ id, onClose }: { id: string; onClose: () => v
           </Button>
           {g.documentLink && <span className="inline-flex items-center gap-1 font-mono text-[12px] text-ink-3"><ExternalLink size={12} aria-hidden />{g.documentLink}</span>}
         </div>
+      </DrawerSection>}
+
+      <DrawerSection folded title="Details">
+        <dl className="grid grid-cols-1 gap-3">
+          <Field label="Latest update">{g.latestUpdate}</Field>
+          <Field label="Supporting department">{g.supportingDept}</Field>
+          <Field label="Internal preparation deadline"><span className="num">{date(g.prepDeadline)}</span></Field>
+          {g.boardMeeting && <Field label="Board meeting">{g.boardMeeting}</Field>}
+          {g.dependencies.length > 0 && <Field label="Dependencies">{g.dependencies.join(' · ')}</Field>}
+          {g.policy && <Field label="Policy">Version {g.policy.version} · next review {date(g.policy.nextReview)}. {g.policy.proposedChanges}</Field>}
+          {g.application && <Field label="Application">{g.application.applicationType} to {g.application.authority}. Missing: {g.application.missingInfo ?? 'nothing'}.</Field>}
+        </dl>
       </DrawerSection>
 
-      <DrawerSection title={`Activity history (${g.activity.length})`}>
+      <DrawerSection folded title="Workflow"><Workflow g={g} /></DrawerSection>
+
+      <DrawerSection folded title={`Activity (${g.activity.length})`}>
         {g.activity.length ? (
           <ol className="relative space-y-3 border-l border-line pl-4">
             {g.activity.map((a, k) => (

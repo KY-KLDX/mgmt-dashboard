@@ -44,9 +44,6 @@ function Shell() {
         <main id="main" className="relative min-w-0 flex-1 overflow-y-auto scroll-thin">
           <TopBar />
           <div className="mx-auto max-w-[1680px] px-6 py-6">{loading ? <PageSkeleton /> : <Page key={page} />}</div>
-          <footer className="border-t border-line px-6 py-4 text-center text-[12px] text-ink-3">
-            Prototype using synthetic demonstration data. Not connected to KLDX production systems. All names are fictional.
-          </footer>
         </main>
       </div>
       <DrawerHost />

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { OWNERS } from '../components/drawers/GovernanceDrawer';
 import { StatusBadge, toneFor } from '../components/ui/Badge';
 import { DataTable, type Column } from '../components/ui/DataTable';
-import { KpiCard } from '../components/ui/KpiCard';
+import { KpiCard, deltaTarget } from '../components/ui/KpiCard';
 import { Card, Chips, EmptyState, Progress, SearchInput, Select, Tabs } from '../components/ui/Primitives';
 import { daysFromAsOf } from '../data/asOf';
 import { BOARD_DATES } from '../data/governance';
@@ -105,32 +105,30 @@ export function GovernancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="Decisions awaiting approval" value={int(k.decisions.length)} sub={`${k.decisions.filter((g) => g.body === 'CEO').length} CEO · ${k.decisions.filter((g) => g.body === 'Board').length} Board · ${k.decisions.filter((g) => g.body === 'Senior Management Team').length} SMT`} onClick={() => goKpi('decisions')} />
-        <KpiCard label="Governance items overdue" value={int(k.overdue.length)} tone={k.overdue.length ? 'crit' : undefined}
-          delta={{ text: k.overdue.length ? `${k.overdue.length} above target of 0` : 'At target of 0', direction: k.overdue.length ? 'up' : 'flat', good: k.overdue.length ? false : null }}
-          sub={`${governance.filter(govPrepMissed).length} more past internal preparation deadline`} onClick={() => goKpi('overdue')} />
-        <KpiCard label="Board matters due within 30 days" value={int(k.board30.length)} sub={`${k.board30.filter((g) => g.readiness < 50).length} below 50% ready`} onClick={() => setParams({ tab: 'board' })} />
-        <KpiCard label="Policies due for review" value={int(k.policiesDue.length)} sub="Next review within 60 days or overdue" onClick={() => setParams({ tab: 'policies' })} />
-        <KpiCard label="Applications awaiting action" value={int(k.applications.length)} sub={`${k.applications.filter((g) => g.application?.missingInfo).length} with missing information`} onClick={() => setParams({ tab: 'policies' })} />
-        <KpiCard label="Blocked high-priority items" value={int(k.blocked.length)} tone={k.blocked.length ? 'warn' : undefined} sub="Open, high priority, with a recorded blocker" onClick={() => goKpi('blocked')} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Awaiting decision" value={int(k.decisions.length)}
+          sub={`Approvals, decisions and endorsements in review: ${k.decisions.filter((g) => g.body === 'CEO').length} CEO, ${k.decisions.filter((g) => g.body === 'Board').length} Board, ${k.decisions.filter((g) => g.body === 'Senior Management Team').length} SMT.`}
+          onClick={() => goKpi('decisions')} />
+        <KpiCard label="Overdue" value={int(k.overdue.length)} tone={k.overdue.length ? 'crit' : undefined} delta={deltaTarget(k.overdue.length)}
+          sub={`${governance.filter(govPrepMissed).length} more have missed their internal preparation deadline. ${k.policiesDue.length} policies due for review; ${k.applications.length} applications open.`}
+          onClick={() => goKpi('overdue')} />
+        <KpiCard label="Board in 30 days" value={int(k.board30.length)} sub={`${k.board30.filter((g) => g.readiness < 50).length} below 50% ready.`} onClick={() => setParams({ tab: 'board' })} />
+        <KpiCard label="Blocked" value={int(k.blocked.length)} tone={k.blocked.length ? 'warn' : undefined} sub="Open high-priority items with a recorded blocker." onClick={() => goKpi('blocked')} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs label="Governance view" value={activeTab} onChange={(t) => setParams(t === 'mine' ? {} : { tab: t })}
           tabs={[
             { key: 'mine', label: 'My Actions', count: mine.filter(govOpen).length },
-            { key: 'ceo', label: 'CEO & Management', count: governance.filter((g) => govOpen(g) && (g.body === 'CEO' || g.body === 'Senior Management Team')).length },
-            { key: 'board', label: 'Board Pipeline', count: governance.filter((g) => govOpen(g) && g.boardMeeting).length },
-            { key: 'policies', label: 'Policies & Applications', count: governance.filter((g) => govOpen(g) && (isPolicy(g) || isApplication(g))).length },
-            { key: 'all', label: 'All Governance Items', count: governance.length },
+            { key: 'ceo', label: 'CEO & SMT', count: governance.filter((g) => govOpen(g) && (g.body === 'CEO' || g.body === 'Senior Management Team')).length },
+            { key: 'board', label: 'Board', count: governance.filter((g) => govOpen(g) && g.boardMeeting).length },
+            { key: 'policies', label: 'Policies & applications', count: governance.filter((g) => govOpen(g) && (isPolicy(g) || isApplication(g))).length },
+            { key: 'all', label: 'All', count: governance.length },
           ]} />
-        <p className="text-[12px] text-ink-3">Updates here are demo changes held in this browser session only.</p>
       </div>
 
       {activeTab === 'mine' && (
         <Card bodyClass="p-0" title={role === 'CEO' ? 'My Actions · CEO' : `My Actions · ${mgmtOwner}`}
-          subtitle={role === 'CEO' ? 'Items requiring a CEO decision, approval or signature' : 'Items where you are the accountable owner'}
           actions={role === 'Management' ? (
             <Select id="persona" label="Viewing as" value={mgmtOwner} onChange={(v) => dispatch({ type: 'mgmtOwner', value: v })} options={OWNERS.filter((o) => o !== 'CEO').map((o) => ({ value: o, label: o }))} />
           ) : undefined}>
@@ -141,7 +139,7 @@ export function GovernancePage() {
       )}
 
       {activeTab === 'ceo' && (
-        <Card bodyClass="p-0" title="CEO & Senior Management Team" subtitle="Operational decisions and management papers. These items do not need Board submission.">
+        <Card bodyClass="p-0" title="CEO & Senior Management Team">
           <DataTable caption="CEO and management items" rows={governance.filter((g) => g.body === 'CEO' || g.body === 'Senior Management Team')} rowKey={(g) => g.id} onRowClick={open}
             columns={govColumns()} initialSort={{ key: 'days', dir: 'asc' }} />
         </Card>
@@ -151,7 +149,7 @@ export function GovernancePage() {
 
       {activeTab === 'policies' && (
         <div className="space-y-6">
-          <Card bodyClass="p-0" title="Policies" subtitle="Review cycle and approval body">
+          <Card bodyClass="p-0" title="Policies">
             <DataTable<GovItem> caption="Policies" rows={governance.filter(isPolicy)} rowKey={(g) => g.id} onRowClick={open} initialSort={{ key: 'next', dir: 'asc' }}
               columns={[
                 { key: 'name', header: 'Policy', render: (g) => <span className="block min-w-[220px] font-medium">{g.title.replace(/ (annual )?review.*$/i, '')}<span className="block text-[11.5px] font-normal text-ink-3">{g.id}</span></span>, sort: (g) => g.title },
@@ -167,7 +165,7 @@ export function GovernancePage() {
                 { key: 'doc', header: 'Evidence', align: 'center', render: docCell },
               ]} />
           </Card>
-          <Card bodyClass="p-0" title="Applications and submissions" subtitle="Regulatory and business applications (synthetic authorities)">
+          <Card bodyClass="p-0" title="Applications">
             <DataTable<GovItem> caption="Applications" rows={governance.filter(isApplication)} rowKey={(g) => g.id} onRowClick={open} initialSort={{ key: 'dl', dir: 'asc' }}
               columns={[
                 { key: 'name', header: 'Application', render: (g) => <span className="block min-w-[220px] font-medium">{g.title.replace(/^Application: /, '')}<span className="block text-[11.5px] font-normal text-ink-3">{g.id}</span></span>, sort: (g) => g.title },
@@ -187,7 +185,7 @@ export function GovernancePage() {
       )}
 
       {activeTab === 'all' && (
-        <Card bodyClass="p-0" title="All governance items" subtitle={`${filterAll(governance).length} of ${governance.length} items`}>
+        <Card bodyClass="p-0" title="All governance items">
           <div className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-3">
             <SearchInput id="gov-q" value={q} onChange={setQ} placeholder="Title, ID or owner" />
             <Select id="gov-cat" label="Category" value={category} onChange={setCategory} options={[{ value: '', label: 'All categories' }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]} />

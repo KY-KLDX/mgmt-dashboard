@@ -1,11 +1,10 @@
-import { BookOpen } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Funnel } from '../components/charts/Funnel';
 import { HBars } from '../components/charts/Charts';
 import { StatusBadge } from '../components/ui/Badge';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { KpiCard, deltaAbs, deltaPct } from '../components/ui/KpiCard';
-import { Button, Card, Chips, SearchInput, Select, Tabs } from '../components/ui/Primitives';
+import { Card, Chips, InfoTip, SearchInput, Select, Tabs } from '../components/ui/Primitives';
 import { AS_OF } from '../data/asOf';
 import { INVESTORS, TRANSACTIONS } from '../data/investors';
 import { date, int, pct, rm, rmShort } from '../lib/format';
@@ -29,7 +28,6 @@ export function InvestorsPage() {
   const [q, setQ] = useState('');
   const [cohort, setCohort] = useState<'period' | 'all'>('period');
   const [funnelSel, setFunnelSel] = useState<string | null>(null);
-  const [showDefs, setShowDefs] = useState(false);
 
   const effectiveTab: Tab = stage ? 'exceptions' : (tab as Tab);
   const at = period.end < AS_OF ? period.end : AS_OF;
@@ -41,7 +39,6 @@ export function InvestorsPage() {
   const activity = investorActivity(period);
   const prevActivity = period.compare ? investorActivity(period.compare) : null;
   const onboarded = INVESTORS.filter((i) => isOnboarded(i, at)).length;
-  const onboardedPrev = INVESTORS.filter((i) => isOnboarded(i, cmp.at)).length;
   const ctosInc = INVESTORS.filter((i) => isCtosIncomplete(i, at));
   const kycInc = INVESTORS.filter((i) => isKycIncomplete(i, at));
   const fun = useMemo(() => funnel(cohort === 'all' ? null : period), [cohort, period]);
@@ -105,41 +102,26 @@ export function InvestorsPage() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total investors onboarded" value={int(onboarded)} delta={deltaAbs(onboarded, onboardedPrev, cmp.label, true)}
-          sub={`Approved accounts · ${activity.onboarded} approved and ${activity.registered} registered in ${period.short}`} />
-        <KpiCard label="CTOS incomplete" value={int(ctosInc.length)} tone={ctosInc.length ? 'warn' : undefined}
-          delta={deltaAbs(ctosInc.length, INVESTORS.filter((i) => isCtosIncomplete(i, cmp.at)).length, cmp.label, false)}
-          sub={`${ctosInc.filter((i) => onboardingAge(i) > thresholds.onboardingStaleDays).length} older than ${thresholds.onboardingStaleDays} days`} onClick={() => setStage('ctos')} />
-        <KpiCard label="KYC incomplete" value={int(kycInc.length)} tone={kycInc.length ? 'warn' : undefined}
-          delta={deltaAbs(kycInc.length, INVESTORS.filter((i) => isKycIncomplete(i, cmp.at)).length, cmp.label, false)}
-          sub={`CTOS done, KYC pending · ${kycInc.filter((i) => onboardingAge(i) > thresholds.onboardingStaleDays).length} older than ${thresholds.onboardingStaleDays} days`} onClick={() => setStage('kyc')} />
-        <KpiCard label={`Failed top-ups · ${period.short}`} value={int(activity.failed.length)} tone={activity.failed.some((t) => t.amount >= thresholds.highValueTopUp) ? 'crit' : undefined}
-          delta={prevActivity ? deltaAbs(activity.failed.length, prevActivity.failed.length, `vs ${period.compare!.label}`, false) : undefined}
-          sub={`${rm(activity.failedAmount)} in final failed status · pending excluded`} onClick={() => setStage('failed')} />
-      </div>
-      <div className="card grid grid-cols-2 divide-line md:grid-cols-4 md:divide-x">
-        {[
-          { l: 'Investors with current subscriptions', v: int(act.length), d: deltaAbs(act.length, actPrev.length, cmp.label, true) },
-          { l: 'Funds allocated into tranches', v: rmShort(allocated), d: deltaPct(allocated, allocatedPrev, cmp.label) },
-          { l: `Investors with completed withdrawals · ${period.short}`, v: int(activity.withdrawers), d: prevActivity ? deltaAbs(activity.withdrawers, prevActivity.withdrawers, `vs ${period.compare!.label}`, false) : undefined },
-          { l: `Completed withdrawal amount · ${period.short}`, v: rm(activity.withdrawalAmount), d: prevActivity ? deltaPct(activity.withdrawalAmount, prevActivity.withdrawalAmount, `vs ${period.compare!.label}`, false) : undefined },
-        ].map((x) => (
-          <div key={x.l} className="px-5 py-3.5">
-            <div className="text-[12px] text-ink-3">{x.l}</div>
-            <div className="num mt-0.5 font-display text-[20px] font-semibold">{x.v}</div>
-            {x.d && <div className={`num text-[11.5px] ${x.d.good === true ? 'text-good' : x.d.good === false ? 'text-crit' : 'text-ink-3'}`}>{x.d.text}</div>}
-          </div>
-        ))}
+        <KpiCard label="Active investors" value={int(act.length)} delta={deltaAbs(act.length, actPrev.length, cmp.label, true)}
+          sub={`Investors with at least one current subscription. ${onboarded} investors onboarded in total.`} onClick={() => setParams({})} />
+        <KpiCard label="Funds allocated" value={rmShort(allocated)} delta={deltaPct(allocated, allocatedPrev, cmp.label)}
+          sub="Investor funds currently allocated into closed or issued tranches." />
+        <KpiCard label="Onboarding incomplete" value={int(ctosInc.length + kycInc.length)} tone={ctosInc.length + kycInc.length ? 'warn' : undefined}
+          delta={deltaAbs(ctosInc.length + kycInc.length, INVESTORS.filter((i) => isCtosIncomplete(i, cmp.at) || isKycIncomplete(i, cmp.at)).length, cmp.label, false)}
+          sub={`${ctosInc.length} waiting on CTOS, ${kycInc.length} waiting on KYC. ${[...ctosInc, ...kycInc].filter((i) => onboardingAge(i) > thresholds.onboardingStaleDays).length} older than ${thresholds.onboardingStaleDays} days.`}
+          onClick={() => setStage('incomplete')} />
+        <KpiCard label={`Failed top-ups`} value={int(activity.failed.length)} tone={activity.failed.some((t) => t.amount >= thresholds.highValueTopUp) ? 'crit' : undefined}
+          delta={prevActivity ? deltaAbs(activity.failed.length, prevActivity.failed.length, period.compare!.short, false) : undefined}
+          sub={`${rm(activity.failedAmount)} failed in ${period.label} (pending excluded). Completed withdrawals: ${activity.withdrawers} investors, ${rm(activity.withdrawalAmount)}.`}
+          onClick={() => setStage('failed')} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 2xl:grid-cols-12">
-        <Card className="2xl:col-span-7" title="Investor lifecycle funnel"
-          subtitle={cohort === 'all' ? 'All registered investors · status as at reporting date' : `Investors registered in ${period.label} · status as at reporting date`}
+        <Card className="2xl:col-span-7" title={<span className="flex items-center gap-2">Onboarding funnel <InfoTip wide text="Status as at the reporting date for investors registered in the selected period (or all investors). CTOS and KYC are separate stages. Click a bar to list investors who stopped there. Conversion below 80% is highlighted." /></span>}
           actions={<Tabs label="Funnel cohort" value={cohort} onChange={setCohort} tabs={[{ key: 'period', label: 'Registered in period' }, { key: 'all', label: 'All investors' }]} />}>
           {fun[0].count ? <Funnel stages={fun} selected={funnelSel} onSelect={setFunnelSel} /> : <p className="py-8 text-center text-[13px] text-ink-3">No registrations in this period. Switch to “All investors”.</p>}
-          <p className="mt-3 text-[11.5px] text-ink-3">CTOS and KYC are separate stages. Select a bar to list investors who stopped at that stage. Conversion below 80% from the previous stage is highlighted.</p>
         </Card>
-        <Card className="2xl:col-span-5" title="Current subscriptions by value band" subtitle={`${act.length} active investors · ${rm(totalCurrent)} · select a band to filter rankings`}>
+        <Card className="2xl:col-span-5" title={<span className="flex items-center gap-2">Value bands <InfoTip wide text={`${act.length} active investors, ${rm(totalCurrent)} current subscriptions. Change ${cmp.label}. Concentrated: a band holds at least 50% of value with at most 25% of investors. Click a band to filter rankings; edit bands in Demo settings.`} /></span>}>
           <HBars valueLabel="Current subscribed amount" color="var(--series-1)" selected={band || null} onSelect={(k) => setBand(band === k ? '' : k)}
             data={bandRows.map((b) => ({ key: String(b.key), label: b.short, value: b.amount, display: rmShort(b.amount), sub: `${b.count} investors · ${pct(b.share)} of value` }))} />
           <table className="mt-2 w-full text-[12.5px]">
@@ -162,14 +144,12 @@ export function InvestorsPage() {
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-[11.5px] text-ink-3">Change {cmp.label}. Concentrated: band holds ≥ 50% of value with ≤ 25% of active investors. Bands are configurable in Demo settings.</p>
         </Card>
       </div>
 
-      <Card title="Investor rankings" bodyClass="p-0"
-        subtitle={role === 'CEO' ? 'CEO View: synthetic names visible' : 'Management View: identities anonymised (INV IDs)'}
+      <Card title="Investors" bodyClass="p-0"
         actions={<Tabs label="Ranking" value={effectiveTab} onChange={(t) => { setParams(t === 'current' ? {} : { tab: t }); setFunnelSel(null); }}
-          tabs={[{ key: 'current', label: 'Largest current subscriptions' }, { key: 'deposits', label: 'Highest total deposited' }, { key: 'wallet', label: 'Highest wallet balance' }, { key: 'exceptions', label: 'Onboarding & exceptions' }]} />}>
+          tabs={[{ key: 'current', label: 'By subscriptions' }, { key: 'deposits', label: 'By deposits' }, { key: 'wallet', label: 'By wallet' }, { key: 'exceptions', label: 'Exceptions' }]} />}>
         <div className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-3">
           <SearchInput id="inv-q" value={q} onChange={setQ} placeholder={role === 'CEO' ? 'Name or INV ID' : 'INV ID'} />
           <Select id="inv-band" label="Value band" value={band} onChange={setBand} options={[{ value: '', label: 'All bands' }, ...bandRows.map((b) => ({ value: String(b.key), label: b.short }))]} />
@@ -178,25 +158,10 @@ export function InvestorsPage() {
           <span className="ml-auto text-[12px] text-ink-3">{rows.length} investors</span>
         </div>
         {chips.length > 0 && <div className="border-b border-line px-5 py-2.5"><Chips chips={chips} onClear={() => { setParams({}); setQ(''); setFunnelSel(null); }} /></div>}
-        {effectiveTab === 'wallet' && <p className="border-b border-line bg-sunken/50 px-5 py-2 text-[12px] text-ink-3">Wallet balance is uninvested cash and is a secondary measure. Use current subscriptions for concentration decisions.</p>}
         <DataTable key={effectiveTab} caption="Investor rankings" rows={rows} rowKey={(m) => m.inv.id} onRowClick={(m) => openDrawer({ kind: 'investor', id: m.inv.id })}
           maxHeight="560px" initialSort={{ key: sortKey, dir: 'desc' }} columns={columns} />
       </Card>
 
-      <Card title={<span className="flex items-center gap-2"><BookOpen size={15} aria-hidden /> Investor definitions</span>}
-        actions={<Button size="sm" variant="ghost" onClick={() => setShowDefs((v) => !v)}>{showDefs ? 'Hide' : 'Show'} definitions</Button>} bodyClass={showDefs ? 'p-5' : 'hidden'}>
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-[13px] md:grid-cols-2">
-          {[
-            ['Current active investor', 'An investor with at least one current subscription.'],
-            ['Allocated funds', 'Investor funds successfully allocated into one or more tranches.'],
-            ['Total money deposited', 'Cumulative value of successful deposits made by the investor.'],
-            ['CTOS incomplete', 'An onboarding record in which the required CTOS stage has not been successfully completed.'],
-            ['KYC incomplete', 'An onboarding record in which the required KYC stage has not been successfully completed. Counted once CTOS is complete.'],
-            ['Failed top-up', 'A top-up transaction with a final failed status, excluding pending transactions.'],
-            ['Withdrawal', 'A completed transfer of investor funds out of the platform or wallet. An investor who withdraws may remain active.'],
-          ].map(([t, d]) => <div key={t}><dt className="font-semibold">{t}</dt><dd className="text-ink-2">{d}</dd></div>)}
-        </dl>
-      </Card>
     </div>
   );
 }

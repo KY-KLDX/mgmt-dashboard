@@ -1,5 +1,7 @@
 import { AS_OF, FY_START, addDays, daysBetween, monthKey, shiftMonthKey, monthStart, monthEnd } from '../data/asOf';
-import { date, monthLong } from './format';
+import { date, monthLabel, monthLong } from './format';
+
+const monthShortName = (k: string) => monthLabel(k, false);
 
 export type PeriodKey = 'MTD' | 'PREV' | 'QTD' | 'YTD' | 'CUSTOM';
 
@@ -12,7 +14,7 @@ export interface Period extends Range {
   key: PeriodKey;
   label: string;
   short: string;
-  compare: (Range & { label: string }) | null;
+  compare: (Range & { label: string; short: string }) | null;
 }
 
 export const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
@@ -32,7 +34,7 @@ export function buildPeriod(key: PeriodKey, custom?: Range): Period {
       const pm = shiftMonthKey(curMonth, -1);
       return {
         key, start: monthStart(curMonth), end: AS_OF, label: `${monthLong(curMonth)} to date`, short: 'MTD',
-        compare: { start: monthStart(pm), end: addDays(monthStart(pm), dayOfMonth - 1), label: `same point in ${monthLong(pm)}` },
+        compare: { start: monthStart(pm), end: addDays(monthStart(pm), dayOfMonth - 1), label: `same point in ${monthLong(pm)}`, short: `vs ${monthShortName(pm)}` },
       };
     }
     case 'PREV': {
@@ -40,7 +42,7 @@ export function buildPeriod(key: PeriodKey, custom?: Range): Period {
       const ppm = shiftMonthKey(curMonth, -2);
       return {
         key, start: monthStart(pm), end: monthEnd(pm), label: monthLong(pm), short: monthLong(pm),
-        compare: { start: monthStart(ppm), end: monthEnd(ppm), label: monthLong(ppm) },
+        compare: { start: monthStart(ppm), end: monthEnd(ppm), label: monthLong(ppm), short: `vs ${monthShortName(ppm)}` },
       };
     }
     case 'QTD': {
@@ -51,7 +53,7 @@ export function buildPeriod(key: PeriodKey, custom?: Range): Period {
       const pqStart = monthStart(shiftMonthKey(qStartMonth, -3));
       return {
         key, start: qStart, end: AS_OF, label: `Q${Math.floor((m - 1) / 3) + 1} ${curMonth.slice(0, 4)} to date`, short: 'QTD',
-        compare: { start: pqStart, end: addDays(pqStart, elapsed), label: 'same point last quarter' },
+        compare: { start: pqStart, end: addDays(pqStart, elapsed), label: 'same point last quarter', short: 'vs last quarter' },
       };
     }
     case 'YTD':
@@ -62,7 +64,7 @@ export function buildPeriod(key: PeriodKey, custom?: Range): Period {
       const cEnd = addDays(r.start, -1);
       return {
         key, start: r.start, end: r.end, label: `${date(r.start)} – ${date(r.end)}`, short: 'Custom',
-        compare: { start: addDays(cEnd, -len), end: cEnd, label: 'preceding period' },
+        compare: { start: addDays(cEnd, -len), end: cEnd, label: 'preceding period', short: 'vs prior period' },
       };
     }
   }

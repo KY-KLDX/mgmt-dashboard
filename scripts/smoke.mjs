@@ -12,12 +12,12 @@ const check = (name, ok, d = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${na
 
 await p.goto(BASE); await p.waitForTimeout(900);
 // Collect investor names while in CEO view, from the Investors page (all tabs).
-await p.getByRole('button', { name: 'Investors', exact: true }).first().click();
+await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Investors/ }).click();
 await p.waitForTimeout(400);
 const grab = () => p.evaluate(() => [...document.querySelectorAll('tbody tr td:first-child span')].map((s) => s.childNodes[0]?.textContent?.trim()).filter((t) => t && !t.startsWith('INV-')));
 const names = [...await grab()];
-for (const t of ['Highest total deposited', 'Onboarding & exceptions']) { await p.getByRole('tab', { name: t }).click(); await p.waitForTimeout(150); names.push(...await grab()); }
-await p.getByRole('tab', { name: 'Largest current subscriptions' }).click();
+for (const t of ['By deposits', 'Exceptions']) { await p.getByRole('tab', { name: t }).click(); await p.waitForTimeout(150); names.push(...await grab()); }
+await p.getByRole('tab', { name: 'By subscriptions' }).click();
 check('CEO View shows investor names', new Set(names).size > 40, `(${new Set(names).size})`);
 
 await p.getByRole('radio', { name: 'Management View' }).click();
@@ -34,7 +34,7 @@ for (const page of ['Executive Overview', 'Finance & Tranches', 'Investors', 'Is
 }
 // Investor rankings tabs, drawer, tranche drawer, search, export, notifications
 await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Investors/ }).click();
-for (const t of ['Highest total deposited', 'Highest wallet balance', 'Onboarding & exceptions']) { await p.getByRole('tab', { name: t }).click(); await p.waitForTimeout(150); await leaks(`tab ${t}`); }
+for (const t of ['By deposits', 'By wallet', 'Exceptions']) { await p.getByRole('tab', { name: t }).click(); await p.waitForTimeout(150); await leaks(`tab ${t}`); }
 await p.locator('tbody tr').first().click(); await p.waitForTimeout(300); await leaks('investor drawer');
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Finance/ }).click(); await p.waitForTimeout(300);
@@ -54,17 +54,19 @@ await p.keyboard.press('Escape');
 // Governance: closing a critical overdue item drops the critical count.
 await p.getByRole('radio', { name: 'CEO View' }).click();
 await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Executive Overview/ }).click(); await p.waitForTimeout(300);
-const critBefore = Number(await p.locator('text=Critical items requiring action').locator('xpath=ancestor::button').locator('.font-display').innerText());
+const critBefore = Number(await p.locator('.card', { hasText: 'Critical items' }).first().locator('.font-display').innerText());
 await p.getByRole('button', { name: /Open record: Internal audit/ }).click(); await p.waitForTimeout(300);
+await p.getByRole('button', { name: 'Update', exact: true }).click(); await p.waitForTimeout(150);
 await p.locator('#g-stage').selectOption('Closed'); await p.waitForTimeout(150);
 await p.getByRole('button', { name: 'Set to Closed' }).click(); await p.waitForTimeout(300);
 const toast = await p.evaluate(() => document.body.innerText.includes('Status set to Closed'));
 check('Toast shown after governance update', toast);
+await p.locator('summary', { hasText: 'Activity' }).click(); await p.waitForTimeout(150);
 const hist = await p.evaluate(() => document.body.innerText.includes('Status changed from Internal Review to Closed'));
 check('Activity history records change', hist);
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Executive Overview/ }).click(); await p.waitForTimeout(300);
-const critAfter = Number(await p.locator('text=Critical items requiring action').locator('xpath=ancestor::button').locator('.font-display').innerText());
+const critAfter = Number(await p.locator('.card', { hasText: 'Critical items' }).first().locator('.font-display').innerText());
 check('Critical count drops after closing item', critAfter === critBefore - 1, `${critBefore} → ${critAfter}`);
 check('No page errors', errors.length === 0, errors.join(' | '));
 await b.close();

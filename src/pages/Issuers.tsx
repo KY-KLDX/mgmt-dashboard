@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ObligationTimeline } from '../components/charts/Timeline';
 import { SeverityBadge, StatusBadge } from '../components/ui/Badge';
 import { DataTable } from '../components/ui/DataTable';
-import { KpiCard } from '../components/ui/KpiCard';
+import { KpiCard, deltaTarget } from '../components/ui/KpiCard';
 import { Card, Chips, SearchInput, Select, Tabs } from '../components/ui/Primitives';
 import { daysFromAsOf } from '../data/asOf';
 import { ISSUERS } from '../data/issuers';
@@ -60,28 +60,25 @@ export function IssuersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-        <KpiCard label="Active issuers" value={int(k.activeIssuers)} sub={`of ${ISSUERS.length} onboarded · with live, outstanding or upcoming tranches`} />
-        <KpiCard label="Live tranches" value={int(k.liveTranches)} sub="Open or fully subscribed, before close" onClick={() => setParams({})} />
-        <KpiCard label="Next issuer event" value={k.next ? dateShort(k.next.date) : '—'}
-          sub={k.next ? <><span className="font-medium text-ink-2">{k.next.title}</span> · {relDays(daysFromAsOf(k.next.date))}</> : 'Nothing scheduled'}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Next event" value={k.next ? dateShort(k.next.date) : '—'}
+          delta={k.next ? { text: k.next.title, direction: 'flat', good: null } : undefined}
+          sub={`${k.activeIssuers} active issuers, ${k.liveTranches} live tranches.`}
           onClick={k.next ? () => openDrawer({ kind: 'issuer', id: k.next!.issuerId }) : undefined} />
-        <KpiCard label="Events due within 30 days" value={int(k.within30)} sub="Obligations and scheduled tranche events" onClick={() => { setParams({ due: '30' }); scrollToTable(); }} />
-        <KpiCard label="Overdue issuer obligations" value={int(k.overdue.length)} tone={k.overdue.length ? 'crit' : undefined}
-          delta={{ text: k.overdue.length ? `${k.overdue.length} above target of 0` : 'At target of 0', direction: k.overdue.length ? 'up' : 'flat', good: k.overdue.length ? false : null }}
-          onClick={() => { setParams({ due: 'overdue' }); scrollToTable(); }} />
-        <KpiCard label="Applications pending" value={int(k.applicationsPending.length)} sub="Issuer applications and regulatory submissions" onClick={() => { setParams({ due: 'applications' }); scrollToTable(); }} />
-        <KpiCard label="High-risk deadlines" value={int(k.highRisk.length)} tone={k.highRisk.length ? 'warn' : undefined} sub="High or Critical risk, overdue or due within 30 days"
+        <KpiCard label="Due in 30 days" value={int(k.within30)} sub="Issuer obligations plus scheduled tranche events." onClick={() => { setParams({ due: '30' }); scrollToTable(); }} />
+        <KpiCard label="Overdue" value={int(k.overdue.length)} tone={k.overdue.length ? 'crit' : undefined} delta={deltaTarget(k.overdue.length)}
+          sub={`Open issuer obligations past due. ${k.applicationsPending.length} applications or submissions pending.`} onClick={() => { setParams({ due: 'overdue' }); scrollToTable(); }} />
+        <KpiCard label="High-risk deadlines" value={int(k.highRisk.length)} tone={k.highRisk.length ? 'warn' : undefined} sub="High or Critical risk, overdue or due within 30 days."
           onClick={() => { setParams({ risk: 'high' }); scrollToTable(); }} />
       </div>
 
-      <Card title="Upcoming obligations timeline" subtitle="Issuer obligations and scheduled tranche events. Dot colour and label show risk level."
+      <Card title="Timeline"
         actions={<Tabs label="Timeline horizon" value={horizon} onChange={setHorizon} tabs={[{ key: '30', label: '30 days' }, { key: '60', label: '60 days' }, { key: '90', label: '90 days' }]} />}>
         <ObligationTimeline horizon={Number(horizon)} events={events} overdue={events.filter((e) => daysFromAsOf(e.date) < 0)}
           onOpen={(e) => openDrawer({ kind: 'issuer', id: e.issuerId })} />
       </Card>
 
-      <Card id="obligations" className="scroll-mt-36" title="Issuer obligations" bodyClass="p-0" subtitle={`${rows.length} of ${OBLIGATIONS.length} obligations · select a row to open the issuer`}>
+      <Card id="obligations" className="scroll-mt-36" title="Obligations" bodyClass="p-0">
         <div className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-3">
           <SearchInput id="ob-q" value={q} onChange={setQ} placeholder="Obligation, issuer or ID" />
           <Select id="ob-issuer" label="Issuer" value={issuer} onChange={setIssuer} options={[{ value: '', label: 'All issuers' }, ...ISSUERS.map((i) => ({ value: i.id, label: issuerShort(i.id) }))]} />

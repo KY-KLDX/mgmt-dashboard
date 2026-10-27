@@ -1,5 +1,4 @@
 import { Building2, Cpu, Gauge, Landmark, ScrollText, Users } from 'lucide-react';
-import { AS_OF_LABEL } from '../../data/asOf';
 import { PAGES, type PageKey } from '../../lib/nav';
 import type { Area } from '../../lib/selectors/alerts';
 import { useApp } from '../../state/AppState';
@@ -39,13 +38,6 @@ export function Sidebar() {
           );
         })}
       </ul>
-      <div className="mt-auto space-y-2 px-5 pb-5 text-[11.5px] leading-relaxed text-rail-muted">
-        <div className="rounded-lg border border-white/10 p-3">
-          <div className="font-semibold text-rail-ink">Synthetic reporting date</div>
-          <div className="num">{AS_OF_LABEL}</div>
-        </div>
-        <p>Prototype using synthetic demonstration data. Not connected to KLDX production systems.</p>
-      </div>
     </nav>
   );
 }

@@ -6,7 +6,7 @@ import { DataTable } from '../components/ui/DataTable';
 import { KpiCard, deltaAbs, deltaPct } from '../components/ui/KpiCard';
 import { Card, Chips, InfoTip, Progress, SearchInput, Select, Tabs } from '../components/ui/Primitives';
 import { ISSUERS } from '../data/issuers';
-import { LATEST_CLOSED_PNL_MONTH, PNL } from '../data/pnl';
+import { LATEST_CLOSED_PNL_MONTH } from '../data/pnl';
 import { TRANCHE_STAGES, type TrancheStage } from '../data/types';
 import { date, monthLabel, monthLong, pct, rm, rmShort, signed } from '../lib/format';
 import { allTrancheStats, closedPnl, issuerShort, latestPnlFor, periodFinance, pnlView, trendSeries, type PnlView, type TrancheStats } from '../lib/selectors/finance';
@@ -33,7 +33,7 @@ export function FinancePage() {
   const prevPnl = pnlView(shiftMonthKey(pnl.month, -1), thresholds);
   const trend = useMemo(() => trendSeries(thresholds), [thresholds]);
   const stats = allTrancheStats(thresholds);
-  const cl = period.compare ? `vs ${period.compare.label}` : '';
+  const cl = period.compare?.short ?? '';
   const metricVal = pnl[metric];
   const budgetVal = pnl.budget[metric];
 
@@ -64,26 +64,20 @@ export function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-        <KpiCard label={`Total subscription value · ${period.short}`} value={rmShort(fin.gross)} delta={deltaPct(fin.gross, cmp?.gross, cl)}
-          sub="Gross requests in tranches closed in the period, including rejected and cancelled" />
-        <KpiCard label={`Successful subscription value · ${period.short}`} value={rmShort(fin.successful)} delta={deltaPct(fin.successful, cmp?.successful, cl)}
-          sub={`${fin.tranches.length} tranche${fin.tranches.length === 1 ? '' : 's'} allocated`} />
-        <KpiCard label="Subscription success rate" value={pct(fin.successRate)} delta={cmp ? deltaAbs(fin.successRate * 100, cmp.successRate * 100, `pts ${cl}`, true, (n) => n.toFixed(1)) : undefined}
-          sub="Successful ÷ gross subscription value" />
-        <KpiCard label={`Recognised revenue · ${period.short}`} value={rmShort(fin.revenue)} delta={deltaPct(fin.revenue, cmp?.revenue, cl)}
-          sub="Σ successful amount × tranche fee rate" />
-        <KpiCard label="Weighted average fee rate" value={pct(fin.feeRate, 2)} delta={cmp ? deltaAbs(fin.feeRate * 100, cmp.feeRate * 100, `pts ${cl}`, true, (n) => n.toFixed(2)) : undefined}
-          sub="Revenue ÷ successful subscriptions" />
-        <KpiCard label={`Month-end ${metric === 'ebitda' ? 'EBITDA' : 'net result'} · ${monthLong(pnl.month)}`} value={rmShort(metricVal)}
-          delta={prevPnl ? deltaAbs(metricVal, prevPnl[metric], `vs ${monthLong(prevPnl.month)}`, true, rm) : undefined}
-          sub={<span>Company-level P&L, not tranche profit{pnl.month < monthKey(period.end) ? ' · latest closed month' : ''}</span>} />
-        <KpiCard label={`Variance against budget · ${monthLong(pnl.month)}`} value={rmShort(metricVal - budgetVal)} tone={metricVal < budgetVal ? 'warn' : undefined}
-          delta={{ text: `${metricVal >= budgetVal ? 'Better' : 'Worse'} than budget ${rm(budgetVal)}`, direction: metricVal >= budgetVal ? 'up' : 'down', good: metricVal >= budgetVal }}
-          sub={`${metric === 'ebitda' ? 'EBITDA' : 'Net result'} actual vs budget`} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Subscriptions" value={rmShort(fin.successful)} delta={deltaPct(fin.successful, cmp?.successful, cl)}
+          sub={`Successful (allocated) subscriptions in tranches closed ${period.label}: ${fin.tranches.length}. Gross requests ${rm(fin.gross)}.`} />
+        <KpiCard label="Revenue" value={rmShort(fin.revenue)} delta={deltaPct(fin.revenue, cmp?.revenue, cl)}
+          sub={`Successful amount × each tranche's fee rate. Weighted fee rate ${pct(fin.feeRate, 2)}.`} />
+        <KpiCard label="Success rate" value={pct(fin.successRate, 0)} delta={cmp ? deltaAbs(fin.successRate * 100, cmp.successRate * 100, `pts ${cl}`, true, (n) => n.toFixed(1)) : undefined}
+          sub="Successful ÷ gross subscription value, including rejected and cancelled requests." />
+        <KpiCard label={`${metric === 'ebitda' ? 'EBITDA' : 'Net result'} vs budget`} value={rmShort(metricVal - budgetVal)} tone={metricVal < budgetVal ? 'warn' : undefined}
+          delta={{ text: `${monthLong(pnl.month)} · ${rmShort(metricVal)}`, direction: metricVal >= budgetVal ? 'up' : 'down', good: metricVal >= budgetVal }}
+          sub={`Company-level month-end P&L for ${monthLong(pnl.month)}, the latest closed month. Not tranche profit. Budget ${rm(budgetVal)}${prevPnl ? `; previous month ${rm(prevPnl[metric])}` : ''}.`}
+          onClick={() => document.getElementById('pnl')?.scrollIntoView({ behavior: 'smooth' })} />
       </div>
 
-      <Card title="Tranche pipeline" subtitle="Select a stage to filter the tranche table">
+      <Card title="Tranche pipeline">
         <ol className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
           {TRANCHE_STAGES.map((st, k) => {
             const inStage = stats.filter((s) => s.tranche.stage === st);
@@ -96,7 +90,7 @@ export function FinancePage() {
                   className={`flex h-full w-full flex-col gap-1 rounded-lg border p-3 text-left transition-colors ${active ? 'border-accent bg-accent-soft/70' : 'border-line bg-surface hover:bg-sunken'}`}>
                   <span className="text-[12px] font-medium text-ink-2">{k + 1}. {st}</span>
                   <span className="num font-display text-[24px] font-semibold leading-none">{inStage.length}</span>
-                  <span className="num text-[12px] text-ink-3">{rmShort(amount)} {st === 'Upcoming' ? 'subscribed' : ['Open', 'Fully Subscribed'].includes(st) ? 'pending' : 'allocated'}</span>
+                  <span className="num text-[12px] text-ink-3">{rmShort(amount)}</span>
                   {flagged > 0 && <span className="mt-1"><StatusBadge status={`${flagged} flagged`} tone="warn" /></span>}
                 </button>
                 {k < 5 && <ChevronRight size={16} className="absolute -right-[13px] top-1/2 z-10 hidden -translate-y-1/2 text-ink-3 xl:block" aria-hidden />}
@@ -107,7 +101,6 @@ export function FinancePage() {
       </Card>
 
       <Card title="Tranches" bodyClass="p-0"
-        subtitle={`${rows.length} of ${stats.filter((s) => (view === 'current' ? s.tranche.stage !== 'Matured' : view === 'historical' ? s.tranche.stage === 'Matured' : true)).length} tranches · revenue is recognised only on successful allocations`}
         actions={<Tabs label="Tranche set" value={view as 'current' | 'historical' | 'all'} onChange={setView}
           tabs={[{ key: 'current', label: 'Current' }, { key: 'historical', label: 'Historical' }, { key: 'all', label: 'All' }]} />}>
         <div className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-3">
@@ -124,7 +117,7 @@ export function FinancePage() {
         <TrancheTable rows={rows} onOpen={(s) => openDrawer({ kind: 'tranche', id: s.tranche.id })} />
       </Card>
 
-      <Card title="Monthly successful subscriptions" subtitle="Tranche-derived. Click a month to filter the tranche table to tranches closed that month.">
+      <Card title={<span className="flex items-center gap-2">Monthly subscriptions <InfoTip text="Successful (allocated) subscriptions by tranche close month. Click a month to filter the tranche table." /></span>}>
         <SubscriptionTrend data={trend} height={230} selected={month || undefined} onMonth={(m) => setMonth(m === month ? '' : m)} />
       </Card>
 
@@ -159,7 +152,7 @@ function TrancheTable({ rows, onOpen }: { rows: TrancheStats[]; onOpen: (s: Tran
 }
 
 const LINES: { key: keyof PnlView; label: string; budget?: 'revenue' | 'opex' | 'ebitda' | 'netResult'; strong?: boolean; cost?: boolean }[] = [
-  { key: 'revenue', label: 'Revenue (recognised, tranche-derived)', budget: 'revenue', strong: true },
+  { key: 'revenue', label: 'Revenue', budget: 'revenue', strong: true },
   { key: 'personnel', label: 'Personnel costs', cost: true },
   { key: 'marketing', label: 'Marketing costs', cost: true },
   { key: 'technology', label: 'Technology operating costs', cost: true },
@@ -184,22 +177,17 @@ function PnlSection({ metric, setMetric }: { metric: 'ebitda' | 'netResult'; set
   const v = (x: PnlView | null, k: keyof PnlView) => (x ? (x[k] as number) : null);
 
   return (
-    <Card id="pnl" title={<span className="flex items-center gap-2">Monthly company P&L <InfoTip text="Synthetic figures. Revenue equals recognised tranche revenue for the month; costs are company-level and not allocated to tranches." /></span>}
-      subtitle="Synthetic month-end figures · company level · not tranche profitability"
+    <Card id="pnl" title={<span className="flex items-center gap-2">Monthly company P&L <InfoTip wide text="Tranche recognised revenue is calculated using the applicable KLDX fee rate. Company profitability is presented separately using month-end P&L data because operating costs are not currently allocated to individual tranches." /></span>}
       className={params.section === 'pnl' ? 'ring-2 ring-accent/40' : ''}
       actions={<>
         <Tabs label="P&L view" value={mode} onChange={setMode} tabs={[{ key: 'month', label: 'Month detail' }, { key: 'trend', label: '12-month view' }]} />
         <Tabs label="Profit measure" value={metric} onChange={setMetric} tabs={[{ key: 'ebitda', label: 'EBITDA' }, { key: 'netResult', label: 'Net result' }]} />
       </>}>
-      <p className="mb-4 rounded-lg border border-info/25 bg-info-soft px-3 py-2 text-[12.5px] text-ink-2">
-        Tranche recognised revenue is calculated using the applicable KLDX fee rate. Company profitability is presented separately using month-end P&L data because operating costs are not currently allocated to individual tranches.
-      </p>
       {mode === 'month' ? (
         <div className="grid grid-cols-1 gap-6 2xl:grid-cols-5">
           <div className="2xl:col-span-3">
             <div className="mb-3 flex items-end gap-3">
               <Select id="pnl-month" label="Month" value={sel} onChange={setSel} options={[...months].reverse().map((m) => ({ value: m.month, label: monthLong(m.month) }))} />
-              <span className="pb-1.5 text-[12px] text-ink-3">October 2026 not yet closed.</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
@@ -238,7 +226,6 @@ function PnlSection({ metric, setMetric }: { metric: 'ebitda' | 'netResult'; set
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-[11.5px] text-ink-3">Costs shown as negative values. Variance arrows: ▲ better than budget, ▼ worse. Budget is set for revenue, total operating expenses, EBITDA and net result only.</p>
           </div>
           <div className="2xl:col-span-2">
             <h3 className="mb-2 text-[13px] font-semibold">Monthly trend</h3>
@@ -271,7 +258,6 @@ function PnlSection({ metric, setMetric }: { metric: 'ebitda' | 'netResult'; set
               </tr>
             </tbody>
           </table>
-          <p className="mt-2 text-[11.5px] text-ink-3">{PNL.length - 1} closed months shown. Costs as negative values. Synthetic demonstration data.</p>
         </div>
       )}
     </Card>

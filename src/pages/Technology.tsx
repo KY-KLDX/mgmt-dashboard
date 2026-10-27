@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SeverityBadge, StatusBadge, toneFor } from '../components/ui/Badge';
 import { DataTable } from '../components/ui/DataTable';
-import { KpiCard, deltaAbs } from '../components/ui/KpiCard';
+import { KpiCard, deltaTarget } from '../components/ui/KpiCard';
 import { Card, Chips, ErrorState, Select, Tabs } from '../components/ui/Primitives';
 import { daysBetween, AS_OF, daysFromAsOf } from '../data/asOf';
 import { AVAILABILITY, CYBER_RISKS, INCIDENTS, RESILIENCE } from '../data/tech';
@@ -27,26 +27,20 @@ export function TechnologyPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="Open critical incidents" value={int(k.critical.length)} tone={k.critical.length ? 'crit' : undefined}
-          delta={{ text: k.critical.length ? `${k.critical.length} above target of 0` : 'At target of 0', direction: k.critical.length ? 'up' : 'flat', good: k.critical.length ? false : null }}
-          sub={k.critical.map((i) => i.service).join(', ') || 'None open'} onClick={() => { setSev('Critical'); }} />
-        <KpiCard label="Open high-severity incidents" value={int(k.high.length)} tone={k.high.length ? 'warn' : undefined}
-          sub={`${k.high.filter((i) => i.status === 'Monitoring').length} restored and being monitored`} onClick={() => setSev('High')} />
-        <KpiCard label="Business services currently affected" value={int(k.affected.length)} tone={k.affected.length ? 'warn' : undefined}
-          sub={k.affected.join(' · ') || 'All services operating normally'} />
-        <KpiCard label="Overdue corrective actions" value={int(k.overdueActions.length)} tone={k.overdueActions.length ? 'crit' : undefined}
-          sub={`${k.overdueActions.filter((a) => a.source.startsWith('INC')).length} incident actions · ${k.overdueActions.filter((a) => a.source.startsWith('CR')).length} risk treatments`}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Critical incidents" value={int(k.critical.length)} tone={k.critical.length ? 'crit' : undefined} delta={deltaTarget(k.critical.length)}
+          sub={`Open critical incidents: ${k.critical.map((i) => i.service).join(', ') || 'none'}. Open high-severity: ${k.high.length}.`} onClick={() => setSev('Critical')} />
+        <KpiCard label="Services affected" value={int(k.affected.length)} tone={k.affected.length ? 'warn' : undefined}
+          sub={k.affected.join(', ') || 'All services operating normally'} />
+        <KpiCard label="Overdue actions" value={int(k.overdueActions.length)} tone={k.overdueActions.length ? 'crit' : undefined} delta={deltaTarget(k.overdueActions.length)}
+          sub={`${k.overdueActions.filter((a) => a.source.startsWith('INC')).length} incident actions and ${k.overdueActions.filter((a) => a.source.startsWith('CR')).length} risk treatments past target date. ${last.open} elevated cyber risks (${last.open - prev.open >= 0 ? '+' : ''}${last.open - prev.open} vs ${monthLong(prev.month)}).`}
           onClick={() => document.getElementById('risks')?.scrollIntoView({ behavior: 'smooth' })} />
-        <KpiCard label="Services below availability target" value={`${k.belowTarget.length} of ${AVAILABILITY.length}`} tone={k.belowTarget.length ? 'warn' : undefined}
-          sub={k.belowTarget.map((a) => `${a.service} ${a.availability}%`).join(' · ')}
+        <KpiCard label="Below availability target" value={`${k.belowTarget.length} of ${AVAILABILITY.length}`} tone={k.belowTarget.length ? 'warn' : undefined}
+          sub={k.belowTarget.map((a) => `${a.service} ${a.availability}% (target ${a.target}%)`).join('; ')}
           onClick={() => document.getElementById('resilience')?.scrollIntoView({ behavior: 'smooth' })} />
-        <KpiCard label="Cyber risk trend" value={`${last.open} elevated`} spark={trend.map((t) => t.open)}
-          delta={deltaAbs(last.open, prev.open, `vs ${monthLong(prev.month)}`, false)}
-          sub="High or Critical risks with treatment not complete (6 months)" />
       </div>
 
-      <Card title="Incidents" bodyClass="p-0" subtitle="Expressed in business terms. Select a row for the executive summary, actions and timeline."
+      <Card title="Incidents" bodyClass="p-0"
         actions={<>
           <Select id="inc-sev" label="Severity" hideLabel value={sev} onChange={setSev} options={[{ value: '', label: 'All severities' }, ...SEV_ORDER.map((s) => ({ value: s, label: s }))]} />
           <Tabs label="Incident scope" value={scope as 'open' | 'all'} onChange={setScope} tabs={[{ key: 'open', label: 'Open', count: INCIDENTS.filter(incidentOpen).length }, { key: 'all', label: 'All (90 days)', count: INCIDENTS.length }]} />
@@ -74,7 +68,6 @@ export function TechnologyPage() {
       <div className="grid grid-cols-1 gap-6 2xl:grid-cols-12">
         <Card id="risks" className="scroll-mt-36 2xl:col-span-8" bodyClass="p-0"
           title={cell ? `Cyber risks at likelihood ${cell.split('-')[0]} × impact ${cell.split('-')[1]}` : 'Top five cyber risks'}
-          subtitle="Ranked by likelihood × impact. Overdue treatment shown in red."
           actions={cell ? <Chips chips={[{ key: 'c', label: `Matrix cell ${cell.replace('-', ' × ')}`, onRemove: () => setCell(null) }]} onClear={() => setCell(null)} /> : undefined}>
           <DataTable<CyberRisk> caption="Top cyber risks" rows={risks} rowKey={(r) => r.id} onRowClick={(r) => openDrawer({ kind: 'risk', id: r.id })}
             initialSort={{ key: 'score', dir: 'desc' }}
@@ -95,13 +88,12 @@ export function TechnologyPage() {
               { key: 'trend', header: 'Trend', render: (r) => <StatusBadge status={r.trend} tone={toneFor(r.trend)} /> },
             ]} />
         </Card>
-        <Card className="2xl:col-span-4" title="Risk matrix" subtitle={`All ${CYBER_RISKS.length} register risks · select a cell to list its risks`}>
+        <Card className="2xl:col-span-4" title="Risk matrix">
           <RiskMatrix selected={cell} onSelect={setCell} />
         </Card>
       </div>
 
-      <Card id="resilience" className={`scroll-mt-36 ${params.section === 'resilience' ? 'ring-2 ring-accent/40' : ''}`} title="Security and resilience measures"
-        subtitle="Synthetic management-level measures. Not a regulatory compliance assessment.">
+      <Card id="resilience" className={`scroll-mt-36 ${params.section === 'resilience' ? 'ring-2 ring-accent/40' : ''}`} title="Resilience">
         {demoError ? (
           <ErrorState title="Resilience measures could not be loaded" body="The synthetic resilience feed is switched off in Demo settings to show this error state. In production this card would show when the source was last updated and who to contact."
             onRetry={() => dispatch({ type: 'demoError', value: false })} />
@@ -111,8 +103,7 @@ export function TechnologyPage() {
               {RESILIENCE.map((m) => (
                 <li key={m.id} className="flex items-start gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-medium">{m.label}</div>
-                    <div className="text-[12px] text-ink-3">{m.note}</div>
+                    <div className="text-[13px] font-medium" title={m.note}>{m.label}</div>
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="num text-[13px] font-semibold">{m.value}</div>
@@ -123,7 +114,7 @@ export function TechnologyPage() {
               ))}
             </ul>
             <div>
-              <h3 className="mb-3 text-[13px] font-semibold">Availability against target · last 30 days</h3>
+              <h3 className="mb-3 text-[13px] font-semibold">Availability, last 30 days</h3>
               <ul className="space-y-3">
                 {AVAILABILITY.map((a) => {
                   const below = a.availability < a.target;
@@ -142,7 +133,6 @@ export function TechnologyPage() {
                   );
                 })}
               </ul>
-              <p className="mt-3 text-[11.5px] text-ink-3">Bars start at 97%. The black tick marks each service's target.</p>
             </div>
           </div>
         )}
@@ -179,7 +169,6 @@ function RiskMatrix({ selected, onSelect }: { selected: string | null; onSelect:
       <div className="ml-7 text-center text-[11px] text-ink-3">Impact →</div>
       <div className="mt-3 flex flex-wrap gap-2 text-[11.5px]">
         {['Critical', 'High', 'Medium', 'Low'].map((r) => <SeverityBadge key={r} severity={r} />)}
-        <span className="text-ink-3">Score = likelihood × impact (demo scale)</span>
       </div>
     </div>
   );

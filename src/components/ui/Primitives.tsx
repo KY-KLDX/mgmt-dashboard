@@ -192,7 +192,7 @@ export function Modal({ open, title, onClose, children, footer, width = 'max-w-x
   );
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-[11.5px] text-ink-3">{label}</dt>

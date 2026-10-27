@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useFocusTrap } from './Primitives';
 
@@ -20,13 +20,25 @@ export function Drawer({ open, title, eyebrow, onClose, children, headerExtra, w
           </div>
           <button data-autofocus onClick={onClose} aria-label="Close panel" className="rounded-md p-1.5 text-ink-3 hover:bg-sunken hover:text-ink"><X size={18} aria-hidden /></button>
         </header>
-        <div className="flex-1 space-y-5 overflow-y-auto scroll-thin px-6 py-5">{children}</div>
+        <div className="flex-1 space-y-3 overflow-y-auto scroll-thin px-6 py-5">{children}</div>
       </div>
     </div>
   );
 }
 
-export function DrawerSection({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+/** A drawer section. `folded` sections start collapsed so the drawer opens on the essentials. */
+export function DrawerSection({ title, children, aside, folded = false }: { title: string; children: ReactNode; aside?: ReactNode; folded?: boolean }) {
+  if (folded) {
+    return (
+      <details className="card group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden">
+          <h3 className="eyebrow">{title}</h3>
+          <ChevronDown size={16} className="text-ink-3 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="border-t border-line p-4">{children}</div>
+      </details>
+    );
+  }
   return (
     <section className="card p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -35,5 +47,15 @@ export function DrawerSection({ title, children, aside }: { title: string; child
       </div>
       {children}
     </section>
+  );
+}
+
+/** The single "what needs to happen" line shown near the top of a drawer. */
+export function NeedsLine({ label = 'Next', text, tone = 'warn' }: { label?: string; text: ReactNode; tone?: 'warn' | 'crit' | 'mute' }) {
+  const cls = tone === 'crit' ? 'border-crit/40 bg-crit-soft/60' : tone === 'warn' ? 'border-warn/40 bg-warn-soft' : 'border-line bg-sunken';
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-[13.5px] ${cls}`}>
+      <span className="mr-2 font-semibold">{label}:</span>{text}
+    </div>
   );
 }
