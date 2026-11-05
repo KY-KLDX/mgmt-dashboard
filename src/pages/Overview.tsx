@@ -52,14 +52,14 @@ function HeroKpi({ icon: Icon, tone, label, value, delta, spark, onClick, info }
 
 function Panel({ icon: Icon, title, children, iconTile = false }: { icon: LucideIcon; title: string; children: ReactNode; iconTile?: boolean }) {
   return (
-    <section className="card min-w-0 overflow-hidden">
-      <header className="flex items-center gap-3 px-6 pb-3 pt-5">
+    <section className="card flex h-full min-w-0 flex-col overflow-hidden">
+      <header className="flex shrink-0 items-center gap-3 px-6 pb-3 pt-5">
         {iconTile
           ? <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-soft text-violet"><Icon size={20} aria-hidden /></span>
           : <Icon size={24} className="text-ink" aria-hidden />}
         <h2 className="font-display text-[21px] font-semibold tracking-tight">{title}</h2>
       </header>
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </section>
   );
 }
@@ -133,9 +133,9 @@ export function OverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        <div className="xl:col-span-7">
+        <div className="min-w-0 xl:col-span-7">
           <Panel icon={Target} title="Subscription progress">
-            <div className="px-3 pb-3">
+            <div className="px-3">
               <DataTable<TrancheStats> caption="Subscription progress for live and upcoming tranches" rows={progress} rowKey={(s) => s.tranche.id}
                 onRowClick={(s) => openDrawer({ kind: 'tranche', id: s.tranche.id })}
                 columns={[
@@ -152,9 +152,9 @@ export function OverviewPage() {
           </Panel>
         </div>
 
-        <div className="xl:col-span-5">
+        <div className="min-w-0 xl:col-span-5">
           <Panel icon={User} title="Investor snapshot">
-            <div className="flex flex-col items-center gap-6 px-6 pb-6 sm:flex-row">
+            <div className="flex flex-1 flex-col items-center gap-6 px-6 pb-6 sm:flex-row">
               <div className="relative h-[220px] w-[220px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -192,7 +192,7 @@ export function OverviewPage() {
           </Panel>
         </div>
 
-        <div className="xl:col-span-5">
+        <div className="min-w-0 xl:col-span-5">
           <Panel icon={CalendarDays} title="Upcoming milestones" iconTile>
             <ol className="relative px-6 pb-4">
               {milestones.map((m, i) => (
@@ -210,7 +210,7 @@ export function OverviewPage() {
           </Panel>
         </div>
 
-        <div className="xl:col-span-7">
+        <div className="min-w-0 xl:col-span-7">
           <Panel icon={ListChecks} title="Priority decisions">
             <ol className="px-6 pb-4">
               {decisions.map((a, i) => (
