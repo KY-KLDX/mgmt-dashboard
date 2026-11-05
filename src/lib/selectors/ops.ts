@@ -27,7 +27,9 @@ export function timelineEvents(): TimelineEvent[] {
   const ev: TimelineEvent[] = OBLIGATIONS.filter(obligationOpen).map((o) => ({
     id: o.id, date: o.dueDate, type: o.type, title: o.title, issuerId: o.issuerId, trancheId: o.trancheId, risk: o.risk, status: o.status, obligationId: o.id,
   }));
-  const has = (tid: string, type: ObligationType) => ev.some((e) => e.trancheId === tid && e.type === type);
+  // Issuance and settlement happen together, so either one covers the scheduled issuance.
+  const has = (tid: string, type: ObligationType) =>
+    ev.some((e) => e.trancheId === tid && (e.type === type || (type === 'Issuance' && e.type === 'Settlement')));
   for (const t of TRANCHES) {
     const push = (date: string, type: ObligationType, label: string) => {
       if (date < AS_OF || has(t.id, type)) return;

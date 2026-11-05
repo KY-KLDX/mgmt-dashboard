@@ -17,6 +17,7 @@ export default {
         good: { DEFAULT: v('good'), soft: v('good-soft') },
         info: { DEFAULT: v('info'), soft: v('info-soft') },
         mute: { DEFAULT: v('mute'), soft: v('mute-soft') },
+        violet: { DEFAULT: v('violet'), soft: v('violet-soft') },
       },
       fontFamily: {
         sans: ['"IBM Plex Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],

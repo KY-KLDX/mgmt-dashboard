@@ -29,6 +29,8 @@
   --info-soft: 230 238 249;
   --mute: 104 115 132;
   --mute-soft: 237 240 244;
+  --violet: 124 92 214;
+  --violet-soft: 239 234 252;
   --shadow: 16 27 41;
   /* chart series, validated for CVD separation */
   --series-1: #2A6FBF;
@@ -47,7 +49,7 @@
     --accent: 38 178 170; --accent-soft: 16 50 52; --accent-ink: 110 214 206;
     --crit: 240 105 110; --crit-soft: 64 24 28; --warn: 230 170 70; --warn-soft: 58 42 16;
     --good: 84 196 132; --good-soft: 18 52 34; --info: 120 165 230; --info-soft: 24 40 64;
-    --mute: 150 162 178; --mute-soft: 34 44 58; --shadow: 0 0 0;
+    --mute: 150 162 178; --mute-soft: 34 44 58; --violet: 172 150 242; --violet-soft: 42 34 72; --shadow: 0 0 0;
     --series-1: #4A86E0; --series-2: #12A08F; --series-3: #D9782F; --series-muted: #5E6B7D;
     --grid: #263243; --axis: #8C99AB;
     color-scheme: dark;
@@ -60,7 +62,7 @@
   --accent: 38 178 170; --accent-soft: 16 50 52; --accent-ink: 110 214 206;
   --crit: 240 105 110; --crit-soft: 64 24 28; --warn: 230 170 70; --warn-soft: 58 42 16;
   --good: 84 196 132; --good-soft: 18 52 34; --info: 120 165 230; --info-soft: 24 40 64;
-  --mute: 150 162 178; --mute-soft: 34 44 58; --shadow: 0 0 0;
+  --mute: 150 162 178; --mute-soft: 34 44 58; --violet: 172 150 242; --violet-soft: 42 34 72; --shadow: 0 0 0;
   --series-1: #4A86E0; --series-2: #12A08F; --series-3: #D9782F; --series-muted: #5E6B7D;
   --grid: #263243; --axis: #8C99AB;
   color-scheme: dark;

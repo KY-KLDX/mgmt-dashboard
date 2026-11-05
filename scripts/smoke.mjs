@@ -1,6 +1,7 @@
 // Browser smoke test: role masking across pages and modals, and the governance close flow.
 // Usage: start `npm run dev`, then `node scripts/smoke.mjs [baseUrl]`.
 import { chromium } from 'playwright-core';
+const pickRole = async (p, name) => { await p.getByRole('button', { name: /Profile and demo role/ }).click(); await p.getByRole('radio', { name }).click(); await p.waitForTimeout(200); };
 const BASE = process.argv[2] ?? 'http://127.0.0.1:5173/';
 const exe = process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';
 const b = await chromium.launch({ executablePath: exe });
@@ -20,7 +21,7 @@ for (const t of ['By deposits', 'Exceptions']) { await p.getByRole('tab', { name
 await p.getByRole('tab', { name: 'By subscriptions' }).click();
 check('CEO View shows investor names', new Set(names).size > 40, `(${new Set(names).size})`);
 
-await p.getByRole('radio', { name: 'Management View' }).click();
+await pickRole(p, 'Management View');
 await p.waitForTimeout(300);
 const leaks = async (where) => {
   const text = await p.evaluate(() => document.body.innerText);
@@ -52,9 +53,9 @@ await p.getByRole('button', { name: /Notifications/ }).click(); await p.waitForT
 await p.keyboard.press('Escape');
 
 // Governance: closing a critical overdue item drops the critical count.
-await p.getByRole('radio', { name: 'CEO View' }).click();
+await pickRole(p, 'CEO View');
 await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Executive Overview/ }).click(); await p.waitForTimeout(300);
-const critBefore = Number(await p.locator('.card', { hasText: 'Critical items' }).first().locator('.font-display').innerText());
+const critBefore = Number((await p.getByRole('button', { name: /Notifications:/ }).getAttribute('aria-label')).match(/\d+/)[0]);
 await p.getByRole('button', { name: /Open record: Internal audit/ }).click(); await p.waitForTimeout(300);
 await p.getByRole('button', { name: 'Update', exact: true }).click(); await p.waitForTimeout(150);
 await p.locator('#g-stage').selectOption('Closed'); await p.waitForTimeout(150);
@@ -66,8 +67,8 @@ const hist = await p.evaluate(() => document.body.innerText.includes('Status cha
 check('Activity history records change', hist);
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 await p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Executive Overview/ }).click(); await p.waitForTimeout(300);
-const critAfter = Number(await p.locator('.card', { hasText: 'Critical items' }).first().locator('.font-display').innerText());
-check('Critical count drops after closing item', critAfter === critBefore - 1, `${critBefore} → ${critAfter}`);
+const critAfter = Number((await p.getByRole('button', { name: /Notifications:/ }).getAttribute('aria-label')).match(/\d+/)[0]);
+check('Attention count drops after closing item', critAfter === critBefore - 1, `${critBefore} → ${critAfter}`);
 check('No page errors', errors.length === 0, errors.join(' | '));
 await b.close();
 console.log(fails ? `\n${fails} failed` : '\nAll smoke checks passed');

@@ -30,6 +30,7 @@ interface State {
   modal: ModalKind;
   toasts: Toast[];
   demoError: boolean;
+  navCollapsed: boolean;
 }
 
 type Action =
@@ -45,7 +46,8 @@ type Action =
   | { type: 'modal'; modal: ModalKind }
   | { type: 'toast'; toast: Toast }
   | { type: 'dismissToast'; id: number }
-  | { type: 'demoError'; value: boolean };
+  | { type: 'demoError'; value: boolean }
+  | { type: 'toggleNav' };
 
 function readHash(): { page: PageKey; params: Record<string, string> } {
   try {
@@ -71,6 +73,7 @@ const initial = (): State => ({
   modal: null,
   toasts: [],
   demoError: false,
+  navCollapsed: false,
 });
 
 function reducer(s: State, a: Action): State {
@@ -108,6 +111,8 @@ function reducer(s: State, a: Action): State {
       return { ...s, toasts: s.toasts.filter((t) => t.id !== a.id) };
     case 'demoError':
       return { ...s, demoError: a.value };
+    case 'toggleNav':
+      return { ...s, navCollapsed: !s.navCollapsed };
   }
 }
 

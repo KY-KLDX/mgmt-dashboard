@@ -17,15 +17,20 @@ export interface Period extends Range {
   compare: (Range & { label: string; short: string }) | null;
 }
 
-export const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
-  { key: 'MTD', label: 'Current month (MTD)' },
-  { key: 'PREV', label: 'Previous month' },
-  { key: 'QTD', label: 'Quarter to date' },
-  { key: 'YTD', label: 'Year to date' },
-  { key: 'CUSTOM', label: 'Custom range' },
-];
 
 const curMonth = monthKey(AS_OF);
+
+const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthFull = (k: string) => `${FULL_MONTHS[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`;
+
+/** Picker labels, e.g. "October 2026". */
+export const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
+  { key: 'MTD', label: monthFull(curMonth) },
+  { key: 'PREV', label: monthFull(shiftMonthKey(curMonth, -1)) },
+  { key: 'QTD', label: `Q${Math.floor((Number(curMonth.slice(5, 7)) - 1) / 3) + 1} ${curMonth.slice(0, 4)} to date` },
+  { key: 'YTD', label: `${curMonth.slice(0, 4)} to date` },
+  { key: 'CUSTOM', label: 'Custom range' },
+];
 const dayOfMonth = Number(AS_OF.slice(8, 10));
 
 export function buildPeriod(key: PeriodKey, custom?: Range): Period {

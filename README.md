@@ -32,7 +32,7 @@ React 18 · TypeScript (strict) · Vite · Tailwind CSS · Recharts · lucide-re
 
 Each page shows at most four KPI cards. Supporting detail sits behind the (i) icon on each card.
 
-1. **Executive Overview** is a one-glance screen: Subscriptions, Revenue, Active investors and Critical items, plus the top five items needing a decision (or, on the Upcoming tab, the top five upcoming items).
+1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, subscription progress for live and upcoming tranches, an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
 2. **Finance & Tranches**: tranche pipeline, filterable tranche table, monthly subscriptions, monthly company P&L.
 3. **Investors**: onboarding funnel (CTOS and KYC as separate stages), value bands, investor rankings and exceptions.
 4. **Issuers & Obligations**: 30/60/90-day timeline and obligations table.
@@ -62,6 +62,8 @@ Key rules:
 - KYC Incomplete counts records that have passed CTOS, so a record is never counted under both CTOS and KYC.
 
 ## Role simulation
+
+Switch roles from the profile menu at the bottom of the sidebar (on phones, from the selector in the top strip).
 
 The **CEO View / Management View** switch is a *demo simulation only*. All investor display text goes through `src/lib/identity.ts`. In Management View it returns anonymised IDs (e.g. `INV-1047`), and search matches IDs only. The smoke test checks that no investor name appears anywhere on screen in Management View.
 

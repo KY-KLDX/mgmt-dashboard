@@ -68,7 +68,7 @@ export function deltaTarget(n: number): KpiDelta {
 }
 
 /** Renders "RM 7.18 million" with the currency and unit set smaller than the figure. */
-function MoneyValue({ v }: { v: string }) {
+export function MoneyValue({ v }: { v: string }) {
   const m = v.match(/^(−?)RM ([\d.,]+)( million)?$/);
   if (!m) return <>{v}</>;
   return (
