@@ -10,7 +10,7 @@ export default {
         sunken: v('sunken'),
         line: v('line'),
         ink: { DEFAULT: v('ink'), 2: v('ink-2'), 3: v('ink-3') },
-        rail: { DEFAULT: v('rail'), ink: v('rail-ink'), muted: v('rail-muted'), hover: v('rail-hover') },
+        rail: { DEFAULT: v('rail'), ink: v('rail-ink'), muted: v('rail-muted'), hover: v('rail-hover'), accent: v('rail-accent') },
         accent: { DEFAULT: v('accent'), soft: v('accent-soft'), ink: v('accent-ink') },
         crit: { DEFAULT: v('crit'), soft: v('crit-soft') },
         warn: { DEFAULT: v('warn'), soft: v('warn-soft') },

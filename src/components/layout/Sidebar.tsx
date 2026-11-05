@@ -36,11 +36,11 @@ export function Sidebar() {
           const active = page === p.key;
           return (
             <li key={p.key} className="relative">
-              {active && <span className="absolute inset-y-1 left-0 w-1 rounded-r bg-accent" aria-hidden />}
+              {active && <span className="absolute inset-y-1 left-0 w-1 rounded-r bg-rail-accent" aria-hidden />}
               <button onClick={() => navigate({ page: p.key })} aria-current={active ? 'page' : undefined} aria-label={c ? p.label : undefined} title={c ? p.label : undefined}
                 className={`mx-3 flex w-[calc(100%-1.5rem)] items-center gap-3 rounded-lg py-2.5 text-left text-[13.5px] transition-colors ${c ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-rail-hover font-semibold text-white' : 'text-rail-ink/85 hover:bg-rail-hover hover:text-white'}`}>
                 <span className="relative">
-                  <Icon size={18} strokeWidth={active ? 2.25 : 1.75} className={active ? 'text-accent' : 'text-rail-muted'} aria-hidden />
+                  <Icon size={18} strokeWidth={active ? 2.25 : 1.75} className={active ? 'text-rail-accent' : 'text-rail-muted'} aria-hidden />
                   {c && n > 0 && <span className={`absolute -right-1.5 -top-1 h-2 w-2 rounded-full ${crit ? 'bg-crit' : 'bg-warn'}`} aria-hidden />}
                 </span>
                 {!c && <span className="flex-1 leading-tight">{p.label}</span>}

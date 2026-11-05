@@ -2,13 +2,13 @@ import { ArrowRight, FileSpreadsheet, FileText, Lock, Search } from 'lucide-reac
 import { useEffect, useMemo, useState } from 'react';
 import { DICTIONARY } from '../../data/dictionary';
 import { DEFAULT_BANDS, DEFAULT_THRESHOLDS, type Bands, type Thresholds } from '../../data/thresholds';
-import { date, rm } from '../../lib/format';
+import { rm } from '../../lib/format';
 import { investorLabel } from '../../lib/identity';
 import { PAGES, type PageKey } from '../../lib/nav';
 import { search, type SearchResult } from '../../lib/selectors/search';
 import { activeInvestors, bandLabels } from '../../lib/selectors/investors';
 import { useApp } from '../../state/AppState';
-import { SeverityBadge, severityStripe } from '../ui/Badge';
+import { NotificationsPanel } from './NotificationsPanel';
 import { Button, EmptyState, Modal } from '../ui/Primitives';
 
 export function GlobalModals() {
@@ -32,7 +32,7 @@ export function GlobalModals() {
       <ExportModal open={modal === 'export'} onClose={close} />
       <DictionaryModal open={modal === 'dictionary'} onClose={close} />
       <SettingsModal open={modal === 'settings'} onClose={close} />
-      <NotificationsModal open={modal === 'notifications'} onClose={close} />
+      {modal === 'notifications' && <NotificationsPanel onClose={close} />}
     </>
   );
 }
@@ -251,25 +251,3 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-function NotificationsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { alerts, navigate } = useApp();
-  const top = alerts.filter((a) => a.severity === 'Critical' || a.severity === 'High');
-  return (
-    <Modal open={open} onClose={onClose} title={`Needs attention (${top.length})`} width="max-w-xl">
-      <ul className="space-y-2">
-        {top.map((a) => (
-          <li key={a.id}>
-            <button onClick={() => navigate(a.link)} className="flex w-full overflow-hidden rounded-lg border border-line text-left hover:bg-sunken">
-              <span className={`w-1 shrink-0 ${severityStripe(a.severity)}`} aria-hidden />
-              <span className="flex-1 px-3 py-2.5">
-                <span className="flex items-center gap-2"><SeverityBadge severity={a.severity} /><span className="text-[11.5px] text-ink-3">{a.area}</span></span>
-                <span className="mt-1 block text-[13px] font-medium">{a.title}</span>
-                <span className="block text-[12px] text-ink-3">{a.owner}{a.date ? ` · ${a.dateKind === 'due' ? 'due' : 'since'} ${date(a.date)}` : ''}</span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Modal>
-  );
-}

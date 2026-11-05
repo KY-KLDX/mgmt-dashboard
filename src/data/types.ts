@@ -141,6 +141,8 @@ export type ObligationStatus = 'Not started' | 'In progress' | 'At risk' | 'Comp
 
 export interface Obligation {
   id: string;
+  /** 2–4 word headline used in notifications. */
+  short?: string;
   issuerId: string;
   trancheId: string | null;
   title: string;
@@ -169,6 +171,8 @@ export type IncidentStatus = 'Investigating' | 'Contained' | 'Monitoring' | 'Res
 
 export interface Incident {
   id: string;
+  /** 2–4 word headline used in notifications. */
+  short?: string;
   title: string;
   category: IncidentCategory;
   severity: 'Critical' | 'High' | 'Medium' | 'Low';
@@ -194,6 +198,8 @@ export type Trend = 'Improving' | 'Stable' | 'Worsening';
 
 export interface CyberRisk {
   id: string;
+  /** 2–4 word headline used in notifications. */
+  short?: string;
   title: string;
   description: string;
   area: string;
@@ -298,6 +304,8 @@ export interface ApplicationMeta {
 
 export interface GovItem {
   id: string;
+  /** 2–4 word headline used in notifications. */
+  short?: string;
   title: string;
   category: GovCategory;
   body: GovBody;

@@ -4,7 +4,7 @@ import { OBLIGATIONS } from '../../data/obligations';
 import { CYBER_RISKS, INCIDENTS, RESILIENCE } from '../../data/tech';
 import type { Thresholds } from '../../data/thresholds';
 import type { GovItem, Role, Severity } from '../../data/types';
-import { date, rm } from '../format';
+import { date, rm, rmShort } from '../format';
 import { investorLabel } from '../identity';
 import type { LinkTarget } from '../nav';
 import { allTrancheStats } from './finance';
@@ -17,6 +17,8 @@ export interface Alert {
   id: string;
   severity: Severity;
   title: string;
+  /** 2–4 word headline for the notifications panel. */
+  headline: string;
   area: Area;
   owner: string;
   /** Due date, or the date the matter started (for age-based items). */
@@ -45,6 +47,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
     out.push({
       id: `AL-${s.tranche.id}`, severity: p < th.trancheCriticalPct ? 'Critical' : 'High',
       title: `${s.tranche.name} closing in ${s.daysToClose} days at ${Math.round(p)}% of target`,
+      headline: `${s.tranche.name.replace(/ Note \d+$/, '')} at ${Math.round(p)}%`,
       area: 'Finance & Tranches', owner: 'Head of Issuer Origination', date: s.tranche.closeDate, dateKind: 'due',
       action: 'Decide: extend offer period, downsize issuance or close as scheduled.',
       link: { page: 'finance', drawer: { kind: 'tranche', id: s.tranche.id } },
@@ -62,7 +65,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
     else if (d <= 30 && severe) sev = 'Medium';
     if (!sev) continue;
     out.push({
-      id: `AL-${o.id}`, severity: sev, title: `${o.title}${obligationOverdue(o) ? ' — overdue' : ''}`, area: 'Issuers',
+      id: `AL-${o.id}`, severity: sev, title: `${o.title}${obligationOverdue(o) ? ' — overdue' : ''}`, headline: o.short ?? o.title, area: 'Issuers',
       owner: o.owner, date: o.dueDate, dateKind: 'due', action: o.nextAction,
       link: { page: 'issuers', params: { q: o.id }, drawer: { kind: 'issuer', id: o.issuerId } },
     });
@@ -72,7 +75,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
   for (const i of INCIDENTS.filter(incidentOpen)) {
     if (i.severity !== 'Critical' && i.severity !== 'High') continue;
     out.push({
-      id: `AL-${i.id}`, severity: i.severity === 'Critical' ? 'Critical' : i.status === 'Monitoring' ? 'Medium' : 'High', title: i.title, area: 'Technology', owner: i.owner,
+      id: `AL-${i.id}`, severity: i.severity === 'Critical' ? 'Critical' : i.status === 'Monitoring' ? 'Medium' : 'High', title: i.title, headline: i.short ?? i.title, area: 'Technology', owner: i.owner,
       date: i.detectedAt.slice(0, 10), dateKind: 'since', action: i.decisionRequired ?? `Resolve by ${date(i.targetResolution)}.`,
       link: { page: 'technology', drawer: { kind: 'incident', id: i.id } },
     });
@@ -83,7 +86,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
     const rating = riskRating(r);
     if (rating !== 'Critical' && rating !== 'High') continue;
     out.push({
-      id: `AL-${r.id}`, severity: rating === 'Critical' ? 'Critical' : 'High', title: `${rating} cyber risk with overdue treatment: ${r.title}`,
+      id: `AL-${r.id}`, severity: rating === 'Critical' ? 'Critical' : 'High', title: `${rating} cyber risk with overdue treatment: ${r.title}`, headline: r.short ?? r.title,
       area: 'Technology', owner: r.owner, date: r.targetDate, dateKind: 'due', action: r.treatment,
       link: { page: 'technology', drawer: { kind: 'risk', id: r.id } },
     });
@@ -91,7 +94,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
 
   for (const m of RESILIENCE.filter((x) => x.status === 'Failed')) {
     out.push({
-      id: `AL-${m.id}`, severity: 'High', title: `${m.label}: ${m.value.toLowerCase()}`, area: 'Technology', owner: 'Chief Technology Officer',
+      id: `AL-${m.id}`, severity: 'High', title: `${m.label}: ${m.value.toLowerCase()}`, headline: 'Backup test failed', area: 'Technology', owner: 'Chief Technology Officer',
       date: null, dateKind: 'due', action: 'Schedule and complete a full recovery re-test.', link: { page: 'technology', params: { section: 'resilience' } },
     });
   }
@@ -119,7 +122,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
     }
     if (!sev) continue;
     out.push({
-      id: `AL-${g.id}`, severity: sev, title: `${g.title} — ${reason}`, area: 'Governance', owner: g.owner, date: g.targetDate, dateKind: 'due',
+      id: `AL-${g.id}`, severity: sev, title: `${g.title} — ${reason}`, headline: g.short ?? g.title, area: 'Governance', owner: g.owner, date: g.targetDate, dateKind: 'due',
       action: g.blocker ? `Unblock: ${g.blocker}` : g.nextAction, link: { page: 'governance', drawer: { kind: 'governance', id: g.id } },
     });
   }
@@ -132,6 +135,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
     out.push({
       id: 'AL-ONBOARDING', severity: stale.length >= th.onboardingBacklogCount ? 'High' : 'Medium',
       title: `${ctos.length + kyc.length} incomplete onboarding cases (${ctos.length} CTOS, ${kyc.length} KYC); ${stale.length} older than ${th.onboardingStaleDays} days`,
+      headline: `${ctos.length + kyc.length} onboardings stuck`,
       area: 'Investors', owner: 'Head of Investor Operations', date: null, dateKind: 'since',
       action: 'Chase stale cases; review eKYC vendor turnaround (INC-2603).', link: { page: 'investors', params: { stage: 'incomplete' } },
     });
@@ -142,7 +146,8 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
   for (const t of TRANSACTIONS.filter((x) => x.type === 'Top-up' && x.status === 'Failed' && x.amount >= th.highValueTopUp && x.date >= since)) {
     const inv = INVESTORS.find((i) => i.id === t.investorId)!;
     out.push({
-      id: `AL-${t.id}`, severity: 'High', title: `${rm(t.amount)} top-up failed — ${investorLabel(inv, role)}`, area: 'Investors',
+      id: `AL-${t.id}`, severity: 'High', title: `${rm(t.amount)} top-up failed — ${investorLabel(inv, role)}`,
+      headline: `${rmShort(t.amount).replace(/ million$/, 'm')} top-up failed`, area: 'Investors',
       owner: 'Head of Investor Operations', date: t.date, dateKind: 'since', action: `Investigate: ${t.note ?? 'failure reason'}.`,
       link: { page: 'investors', drawer: { kind: 'investor', id: inv.id } },
     });
@@ -178,3 +183,15 @@ export function upcomingItems(gov: GovItem[], horizonDays = 45): UpcomingItem[] 
   return items.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+
+export type Bucket = 'overdue' | 'week' | 'watch';
+
+/** Which notification group an alert belongs to, and the one-chip status text shown beside it. */
+export function bucketOf(a: Alert): { bucket: Bucket; chip: string } {
+  if (!a.date) return { bucket: a.severity === 'Critical' || a.severity === 'High' ? 'week' : 'watch', chip: 'Act now' };
+  const d = daysFromAsOf(a.date);
+  if (a.dateKind === 'since') return { bucket: a.severity === 'Critical' || a.severity === 'High' ? 'week' : 'watch', chip: `Open ${-d}d` };
+  if (d < 0) return { bucket: 'overdue', chip: `${-d}d late` };
+  if (d <= 7) return { bucket: 'week', chip: d === 0 ? 'Due today' : `Due in ${d}d` };
+  return { bucket: 'watch', chip: `Due ${date(a.date).replace(/ \d{4}$/, '')}` };
+}

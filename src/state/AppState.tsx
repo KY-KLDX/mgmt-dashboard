@@ -31,6 +31,8 @@ interface State {
   toasts: Toast[];
   demoError: boolean;
   navCollapsed: boolean;
+  /** Alert ids the viewer has marked as seen (demo, browser memory only). */
+  seen: string[];
 }
 
 type Action =
@@ -47,7 +49,8 @@ type Action =
   | { type: 'toast'; toast: Toast }
   | { type: 'dismissToast'; id: number }
   | { type: 'demoError'; value: boolean }
-  | { type: 'toggleNav' };
+  | { type: 'toggleNav' }
+  | { type: 'markSeen'; ids: string[] };
 
 function readHash(): { page: PageKey; params: Record<string, string> } {
   try {
@@ -74,6 +77,7 @@ const initial = (): State => ({
   toasts: [],
   demoError: false,
   navCollapsed: false,
+  seen: [],
 });
 
 function reducer(s: State, a: Action): State {
@@ -113,6 +117,8 @@ function reducer(s: State, a: Action): State {
       return { ...s, demoError: a.value };
     case 'toggleNav':
       return { ...s, navCollapsed: !s.navCollapsed };
+    case 'markSeen':
+      return { ...s, seen: [...new Set([...s.seen, ...a.ids])] };
   }
 }
 

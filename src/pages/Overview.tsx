@@ -1,7 +1,7 @@
 import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CalendarDays, ChevronRight, Coins, ListChecks, Target, User, Users, UsersRound, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { TipBox } from '../components/charts/Charts';
+import { useState } from 'react';
+import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { Sparkline } from '../components/charts/Sparkline';
 import { DataTable } from '../components/ui/DataTable';
 import { MoneyValue, deltaAbs, deltaPct, type KpiDelta } from '../components/ui/KpiCard';
@@ -27,7 +27,7 @@ export function shortTitle(a: Alert): string {
 
 const TILE: Record<'blue' | 'teal' | 'violet', { tile: string; line: string }> = {
   blue: { tile: 'bg-info-soft text-info', line: 'rgb(var(--info))' },
-  teal: { tile: 'bg-accent-soft text-accent', line: 'rgb(var(--accent))' },
+  teal: { tile: 'bg-good-soft text-good', line: 'var(--series-2)' },
   violet: { tile: 'bg-violet-soft text-violet', line: 'rgb(var(--violet))' },
 };
 
@@ -85,6 +85,7 @@ const RISK_DOT: Record<TimelineEvent['risk'], string> = { Critical: 'bg-crit', H
 
 export function OverviewPage() {
   const { period, thresholds, alerts, navigate, openDrawer } = useApp();
+  const [hover, setHover] = useState<string | null>(null);
 
   const fin = periodFinance(period, thresholds);
   const cmpFin = period.compare ? periodFinance(period.compare, thresholds) : null;
@@ -143,7 +144,7 @@ export function OverviewPage() {
                   { key: 't', header: 'Target raise', align: 'right', render: (s) => rm(s.tranche.target) },
                   { key: 'r', header: 'Raised so far', align: 'right', render: (s) => rm(s.pending) },
                   { key: 'p', header: 'Progress', render: (s) => (
-                    <span className="flex min-w-[140px] items-center gap-2.5"><span className="num w-10 font-semibold">{pct(s.fulfilment, 0)}</span><span className="flex-1"><Progress value={s.fulfilment} tone="accent" label={`${s.tranche.name} progress`} /></span></span>
+                    <span className="flex min-w-[140px] items-center gap-2.5"><span className="num w-10 font-semibold">{pct(s.fulfilment, 0)}</span><span className="flex-1"><Progress value={s.fulfilment} tone={s.risk === 'Critical' || s.risk === 'Attention' ? 'crit' : 'accent'} label={`${s.tranche.name} progress`} /></span></span>
                   ) },
                   { key: 'c', header: 'Closing date', render: (s) => <span className="num whitespace-nowrap">{date(s.tranche.closeDate)}</span> },
                   { key: 's', header: 'Status', render: (s) => { const st = statusOf(s); return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${st.cls}`}><span className="h-2 w-2 rounded-full bg-current" aria-hidden />{st.label}</span>; } },
@@ -159,27 +160,24 @@ export function OverviewPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={groups} dataKey="n" nameKey="label" innerRadius={78} outerRadius={104} startAngle={90} endAngle={-270} stroke="rgb(var(--surface))" strokeWidth={2}
-                      isAnimationActive={false} onClick={(d) => navigate((d as unknown as { link: LinkTarget }).link)} style={{ cursor: 'pointer' }}>
-                      {groups.map((g) => <Cell key={g.key} fill={g.color} />)}
+                      isAnimationActive={false} onClick={(d) => navigate((d as unknown as { link: LinkTarget }).link)} style={{ cursor: 'pointer' }}
+                      onMouseEnter={(_, i) => setHover(groups[i].key)} onMouseLeave={() => setHover(null)}>
+                      {groups.map((g) => <Cell key={g.key} fill={g.color} fillOpacity={hover && hover !== g.key ? 0.25 : 1} />)}
                     </Pie>
-                    <Tooltip content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const g = payload[0].payload as (typeof groups)[number];
-                      return <TipBox title={g.label} rows={[{ label: 'Investors', value: `${g.n} (${pct(g.n / total, 0)})` }]} note={g.sub} />;
-                    }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
                   <span>
-                    <span className="num block font-display text-[46px] font-semibold leading-none">{groups[0].n}</span>
-                    <span className="mt-1 block text-[15px] text-ink-2">Active<br />investors</span>
+                    <span className="num block font-display text-[46px] font-semibold leading-none">{(groups.find((g) => g.key === hover) ?? groups[0]).n}</span>
+                    <span className="mx-auto mt-1 block max-w-[120px] text-[14px] leading-snug text-ink-2">{(groups.find((g) => g.key === hover) ?? groups[0]).label}</span>
                   </span>
                 </div>
               </div>
               <ul className="w-full flex-1 divide-y divide-line">
                 {groups.map((g) => (
                   <li key={g.key}>
-                    <button onClick={() => navigate(g.link)} className="flex w-full items-center gap-3 py-3 text-left hover:opacity-80">
+                    <button onClick={() => navigate(g.link)} onMouseEnter={() => setHover(g.key)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(g.key)} onBlur={() => setHover(null)}
+                      className={`-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors ${hover === g.key ? 'bg-sunken' : ''} ${hover && hover !== g.key ? 'opacity-50' : ''}`}>
                       <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} aria-hidden />
                       <span className="min-w-0 flex-1 text-[14px] leading-snug">{g.label}</span>
                       <span className="num w-8 text-right font-display text-[22px] font-semibold">{g.n}</span>
