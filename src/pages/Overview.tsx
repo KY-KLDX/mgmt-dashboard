@@ -43,9 +43,9 @@ function HeroKpi({ icon: Icon, tone, label, value, delta, spark, onClick, info }
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-semibold text-ink">{label}</span>
         <span className="num mt-1 block whitespace-nowrap font-display text-[30px] font-semibold leading-tight tracking-tight"><MoneyValue v={value} /></span>
-        {delta && <span className={`mt-1 flex items-center gap-1 text-[14px] font-semibold ${dcls}`}><D size={16} aria-hidden />{delta.text}</span>}
+        {delta && <span className={`mt-1 flex items-center gap-1 whitespace-nowrap text-[13.5px] font-semibold ${dcls}`}><D size={16} aria-hidden />{delta.text}</span>}
       </span>
-      <span className="hidden self-end sm:block"><Sparkline values={spark} width={104} height={52} color={TILE[tone].line} /></span>
+      <span className="hidden self-end sm:block"><Sparkline values={spark} width={84} height={48} color={TILE[tone].line} /></span>
     </button>
   );
 }
@@ -93,7 +93,7 @@ export function OverviewPage() {
   const inPeriod = trend.filter((t) => monthsIn(period).includes(t.month));
   const budgetSubs = inPeriod.reduce((a, t) => a + (t.budgetSubs ?? 0), 0);
   const budgetRev = inPeriod.reduce((a, t) => a + (t.budgetRevenue ?? 0), 0);
-  const cl = period.compare ? `vs ${period.compare.label.replace(/^same point in /, '')}` : 'vs budget';
+  const cl = period.compare ? `vs ${period.compare.label.replace(/^same point in /, '').replace(/^(\w{3})\w* (\d{4})$/, '$1 $2')}` : 'vs budget';
 
   const at = period.end < AS_OF ? period.end : AS_OF;
   const cmp = compareDate(period);
@@ -156,10 +156,10 @@ export function OverviewPage() {
         <div className="min-w-0 xl:col-span-5">
           <Panel icon={User} title="Investor snapshot">
             <div className="flex flex-1 flex-col items-center gap-6 px-6 pb-6 sm:flex-row">
-              <div className="relative h-[220px] w-[220px] shrink-0">
+              <div className="relative h-[180px] w-[180px] shrink-0 2xl:h-[220px] 2xl:w-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={groups} dataKey="n" nameKey="label" innerRadius={78} outerRadius={104} startAngle={90} endAngle={-270} stroke="rgb(var(--surface))" strokeWidth={2}
+                    <Pie data={groups} dataKey="n" nameKey="label" innerRadius="74%" outerRadius="98%" startAngle={90} endAngle={-270} stroke="rgb(var(--surface))" strokeWidth={2}
                       isAnimationActive={false} onClick={(d) => navigate((d as unknown as { link: LinkTarget }).link)} style={{ cursor: 'pointer' }}
                       onMouseEnter={(_, i) => setHover(groups[i].key)} onMouseLeave={() => setHover(null)}>
                       {groups.map((g) => <Cell key={g.key} fill={g.color} fillOpacity={hover && hover !== g.key ? 0.25 : 1} />)}
@@ -168,7 +168,7 @@ export function OverviewPage() {
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
                   <span>
-                    <span className="num block font-display text-[46px] font-semibold leading-none">{(groups.find((g) => g.key === hover) ?? groups[0]).n}</span>
+                    <span className="num block font-display text-[38px] font-semibold leading-none 2xl:text-[46px]">{(groups.find((g) => g.key === hover) ?? groups[0]).n}</span>
                     <span className="mx-auto mt-1 block max-w-[120px] text-[14px] leading-snug text-ink-2">{(groups.find((g) => g.key === hover) ?? groups[0]).label}</span>
                   </span>
                 </div>
@@ -179,7 +179,7 @@ export function OverviewPage() {
                     <button onClick={() => navigate(g.link)} onMouseEnter={() => setHover(g.key)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(g.key)} onBlur={() => setHover(null)}
                       className={`-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors ${hover === g.key ? 'bg-sunken' : ''} ${hover && hover !== g.key ? 'opacity-50' : ''}`}>
                       <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} aria-hidden />
-                      <span className="min-w-0 flex-1 text-[14px] leading-snug">{g.label}</span>
+                      <span className="min-w-0 flex-1 text-[13.5px] leading-snug">{g.label}</span>
                       <span className="num w-8 text-right font-display text-[22px] font-semibold">{g.n}</span>
                       <span className="num w-11 text-right text-[14px] text-ink-3">{pct(g.n / total, 0)}</span>
                     </button>

@@ -19,7 +19,7 @@ import { useApp, useParam } from '../state/AppState';
 type Tab = 'current' | 'deposits' | 'wallet' | 'exceptions';
 
 export function InvestorsPage() {
-  const { period, role, bands: bandCfg, openDrawer, setParams, thresholds } = useApp();
+  const { period, bands: bandCfg, openDrawer, setParams, thresholds } = useApp();
   const [tab] = useParam('tab', 'current');
   const [band, setBand] = useParam('band');
   const [stage, setStage] = useParam('stage');
@@ -60,7 +60,7 @@ export function InvestorsPage() {
   if (band) rows = rows.filter((m) => m.currentCount > 0 && bandIndex(m.current, bandCfg) === Number(band));
   if (ctos) rows = rows.filter((m) => m.inv.ctos === ctos);
   if (kyc) rows = rows.filter((m) => m.inv.kyc === kyc);
-  if (q) rows = rows.filter((m) => investorMatches(m.inv, q, role));
+  if (q) rows = rows.filter((m) => investorMatches(m.inv, q));
   if (funnelSel) {
     const k = FUNNEL_STAGES.indexOf(funnelSel as (typeof FUNNEL_STAGES)[number]);
     const here = new Set(fun[k].ids);
@@ -80,9 +80,9 @@ export function InvestorsPage() {
   ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
 
   const columns: Column<InvestorMetrics>[] = [
-    { key: 'name', header: role === 'CEO' ? 'Investor' : 'Investor ID', render: (m) => (
-      <span className="whitespace-nowrap font-medium">{investorLabel(m.inv, role)}<span className="block text-[11.5px] font-normal text-ink-3">{investorSubLabel(m.inv, role)}</span></span>
-    ), sort: (m) => investorLabel(m.inv, role) },
+    { key: 'name', header: 'Investor', render: (m) => (
+      <span className="whitespace-nowrap font-medium">{investorLabel(m.inv)}<span className="block text-[11.5px] font-normal text-ink-3">{investorSubLabel(m.inv)}</span></span>
+    ), sort: (m) => investorLabel(m.inv) },
     { key: 'cur', header: 'Current subscriptions', align: 'right', render: (m) => rm(m.current), sort: (m) => m.current },
     { key: 'dep', header: 'Lifetime deposits', align: 'right', render: (m) => rm(m.deposits), sort: (m) => m.deposits },
     { key: 'alloc', header: 'Allocated (lifetime)', align: 'right', render: (m) => rm(m.lifetimeAllocated), sort: (m) => m.lifetimeAllocated, secondary: true },
@@ -121,7 +121,7 @@ export function InvestorsPage() {
           actions={<Tabs label="Funnel cohort" value={cohort} onChange={setCohort} tabs={[{ key: 'period', label: 'Registered in period' }, { key: 'all', label: 'All investors' }]} />}>
           {fun[0].count ? <Funnel stages={fun} selected={funnelSel} onSelect={setFunnelSel} /> : <p className="py-8 text-center text-[13px] text-ink-3">No registrations in this period. Switch to “All investors”.</p>}
         </Card>
-        <Card className="2xl:col-span-5" title={<span className="flex items-center gap-2">Value bands <InfoTip wide text={`${act.length} active investors, ${rm(totalCurrent)} current subscriptions. Change ${cmp.label}. Concentrated: a band holds at least 50% of value with at most 25% of investors. Click a band to filter rankings; edit bands in Demo settings.`} /></span>}>
+        <Card className="2xl:col-span-5" title={<span className="flex items-center gap-2">Value bands <InfoTip wide text={`${act.length} active investors, ${rm(totalCurrent)} current subscriptions. Change ${cmp.label}. Concentrated: a band holds at least 50% of value with at most 25% of investors. Click a band to filter the list.`} /></span>}>
           <HBars valueLabel="Current subscribed amount" color="var(--series-1)" selected={band || null} onSelect={(k) => setBand(band === k ? '' : k)}
             data={bandRows.map((b) => ({ key: String(b.key), label: b.short, value: b.amount, display: rmShort(b.amount), sub: `${b.count} investors · ${pct(b.share)} of value` }))} />
           <table className="mt-2 w-full text-[12.5px]">
@@ -151,7 +151,7 @@ export function InvestorsPage() {
         actions={<Tabs label="Ranking" value={effectiveTab} onChange={(t) => { setParams(t === 'current' ? {} : { tab: t }); setFunnelSel(null); }}
           tabs={[{ key: 'current', label: 'By subscriptions' }, { key: 'deposits', label: 'By deposits' }, { key: 'wallet', label: 'By wallet' }, { key: 'exceptions', label: 'Exceptions' }]} />}>
         <div className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-3">
-          <SearchInput id="inv-q" value={q} onChange={setQ} placeholder={role === 'CEO' ? 'Name or INV ID' : 'INV ID'} />
+          <SearchInput id="inv-q" value={q} onChange={setQ} placeholder="Name or INV ID" />
           <Select id="inv-band" label="Value band" value={band} onChange={setBand} options={[{ value: '', label: 'All bands' }, ...bandRows.map((b) => ({ value: String(b.key), label: b.short }))]} />
           <Select id="inv-ctos" label="CTOS status" value={ctos} onChange={setCtos} options={[{ value: '', label: 'Any' }, { value: 'Completed', label: 'Completed' }, { value: 'Incomplete', label: 'Incomplete' }, { value: 'Not started', label: 'Not started' }]} />
           <Select id="inv-kyc" label="KYC status" value={kyc} onChange={setKyc} options={[{ value: '', label: 'Any' }, { value: 'Completed', label: 'Completed' }, { value: 'Incomplete', label: 'Incomplete' }, { value: 'Not started', label: 'Not started' }]} />

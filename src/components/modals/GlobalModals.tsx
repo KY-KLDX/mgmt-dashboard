@@ -1,12 +1,10 @@
-import { ArrowRight, FileSpreadsheet, FileText, Lock, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { FileSpreadsheet, FileText } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { DICTIONARY } from '../../data/dictionary';
-import { DEFAULT_BANDS, DEFAULT_THRESHOLDS, type Bands, type Thresholds } from '../../data/thresholds';
 import { rm } from '../../lib/format';
 import { investorLabel } from '../../lib/identity';
 import { PAGES, type PageKey } from '../../lib/nav';
-import { search, type SearchResult } from '../../lib/selectors/search';
-import { activeInvestors, bandLabels } from '../../lib/selectors/investors';
+import { activeInvestors } from '../../lib/selectors/investors';
 import { useApp } from '../../state/AppState';
 import { NotificationsPanel } from './NotificationsPanel';
 import { Button, EmptyState, Modal } from '../ui/Primitives';
@@ -15,82 +13,17 @@ export function GlobalModals() {
   const { modal, dispatch } = useApp();
   const close = () => dispatch({ type: 'modal', modal: null });
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        dispatch({ type: 'modal', modal: 'search' });
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [dispatch]);
-
   return (
     <>
-      <SearchPalette open={modal === 'search'} onClose={close} />
       <ExportModal open={modal === 'export'} onClose={close} />
       <DictionaryModal open={modal === 'dictionary'} onClose={close} />
-      <SettingsModal open={modal === 'settings'} onClose={close} />
       {modal === 'notifications' && <NotificationsPanel onClose={close} />}
     </>
   );
 }
 
-function SearchPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { role, governance, navigate } = useApp();
-  const [q, setQ] = useState('');
-  useEffect(() => { if (!open) setQ(''); }, [open]);
-  const results = useMemo(() => search(q, role, governance), [q, role, governance]);
-  const groups = useMemo(() => {
-    const m = new Map<string, SearchResult[]>();
-    results.forEach((r) => m.set(r.group, [...(m.get(r.group) ?? []), r]));
-    return [...m.entries()];
-  }, [results]);
-  return (
-    <Modal open={open} onClose={onClose} title="Search records" width="max-w-2xl">
-      <label htmlFor="global-search" className="sr-only">Search tranches, issuers, investors, incidents, policies and governance items</label>
-      <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 focus-within:border-accent">
-        <Search size={16} className="text-ink-3" aria-hidden />
-        <input id="global-search" data-autofocus autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder={role === 'CEO' ? 'Tranche, issuer, investor name or ID, incident, policy…' : 'Tranche, issuer, investor ID (e.g. INV-1047), incident, policy…'}
-          className="h-10 flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-3" />
-      </div>
-      {role === 'Management' && <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-3"><Lock size={12} aria-hidden /> Management View: investors are searchable by anonymised ID only.</p>}
-      <div className="mt-3">
-        {q.trim().length < 2 ? (
-          <p className="py-6 text-center text-[13px] text-ink-3">Type at least two characters. Try “Arus”, “payment”, “AML” or “INV-1007”.</p>
-        ) : !results.length ? (
-          <EmptyState title={`No synthetic records match “${q}”`} body="Search covers tranches, issuers, investors, incidents, cyber risks, obligations and governance items." />
-        ) : (
-          <div className="space-y-4">
-            {groups.map(([g, rs]) => (
-              <div key={g}>
-                <div className="eyebrow mb-1.5">{g}</div>
-                <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
-                  {rs.map((r) => (
-                    <li key={`${r.group}-${r.key}`}>
-                      <button onClick={() => navigate(r.link)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent-soft/50">
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13.5px] font-medium">{r.title}</span>
-                          <span className="block truncate text-[12px] text-ink-3">{r.sub}</span>
-                        </span>
-                        <ArrowRight size={14} className="text-ink-3" aria-hidden />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
 function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { page, role, period, toast } = useApp();
+  const { page, period, toast } = useApp();
   const [scope, setScope] = useState<PageKey | 'all'>(page);
   const [format, setFormat] = useState<'PDF' | 'XLSX'>('PDF');
   const [level, setLevel] = useState<'aggregate' | 'record'>('aggregate');
@@ -98,7 +31,7 @@ function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   const preview = activeInvestors().sort((a, b) => b.current - a.current).slice(0, 3);
   const confirm = () => {
     onClose();
-    toast(`Demo export prepared: ${scope === 'all' ? 'all pages' : PAGES.find((p) => p.key === scope)?.label} (${format}, ${role === 'CEO' ? 'CEO View' : 'anonymised'}). No file was generated.`);
+    toast(`Demo export prepared: ${scope === 'all' ? 'all pages' : PAGES.find((p) => p.key === scope)?.label} (${format}). No file was generated.`);
   };
   return (
     <Modal open={open} onClose={onClose} title="Export management pack" footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={confirm}>Prepare demo export</Button></>}>
@@ -125,7 +58,7 @@ function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           {(['aggregate', 'record'] as const).map((l) => (
             <label key={l} className="flex items-center gap-2 text-[13px]">
               <input type="radio" name="export-level" checked={level === l} onChange={() => setLevel(l)} />
-              {l === 'aggregate' ? 'Aggregates only (bands, counts, totals)' : `Record level (${role === 'CEO' ? 'names, CEO View' : 'anonymised IDs'})`}
+              {l === 'aggregate' ? 'Aggregates only (bands, counts, totals)' : 'Record level (includes investor names)'}
             </label>
           ))}
         </fieldset>
@@ -139,7 +72,7 @@ function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                 <tbody>
                   {preview.map((m) => (
                     <tr key={m.inv.id} className="border-b border-line last:border-0">
-                      <td className="px-3 py-1.5">{investorLabel(m.inv, role)}</td>
+                      <td className="px-3 py-1.5">{investorLabel(m.inv)}</td>
                       <td className="num px-3 py-1.5 text-right">{rm(m.current)}</td>
                     </tr>
                   ))}
@@ -184,70 +117,3 @@ function DictionaryModal({ open, onClose }: { open: boolean; onClose: () => void
     </Modal>
   );
 }
-
-const TH_FIELDS: { key: keyof Thresholds; label: string; unit: string }[] = [
-  { key: 'trancheClosingSoonDays', label: 'Tranche "closing soon" window', unit: 'days' },
-  { key: 'trancheUnderTargetPct', label: 'Tranche under-target alert below', unit: '% of target' },
-  { key: 'trancheCriticalPct', label: 'Tranche critical alert below', unit: '% of target' },
-  { key: 'dueSoonDays', label: 'Obligation "due soon" window', unit: 'days' },
-  { key: 'decisionWindowDays', label: 'CEO decision alert window', unit: 'days' },
-  { key: 'onboardingStaleDays', label: 'Onboarding case is stale after', unit: 'days' },
-  { key: 'onboardingBacklogCount', label: 'Onboarding backlog alert at', unit: 'cases' },
-  { key: 'highValueTopUp', label: 'High-value failed top-up from', unit: 'RM' },
-];
-
-function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { thresholds, bands, dispatch, toast, demoError } = useApp();
-  const [th, setTh] = useState<Thresholds>(thresholds);
-  const [b, setB] = useState<Bands>(bands);
-  useEffect(() => { if (open) { setTh(thresholds); setB(bands); } }, [open, thresholds, bands]);
-  const bandsValid = b[0] > b[1] && b[1] > b[2] && b[2] > 0;
-  const save = () => {
-    dispatch({ type: 'thresholds', value: th });
-    dispatch({ type: 'bands', value: b });
-    onClose();
-    toast('Demo thresholds and investor bands updated. Alerts and segments recalculated.');
-  };
-  return (
-    <Modal open={open} onClose={onClose} title="Demo settings" width="max-w-2xl"
-      footer={<>
-        <Button variant="ghost" onClick={() => { setTh(DEFAULT_THRESHOLDS); setB(DEFAULT_BANDS); }}>Reset to defaults</Button>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="primary" onClick={save} disabled={!bandsValid}>Apply</Button>
-      </>}>
-      <p className="mb-4 rounded-lg bg-info-soft px-3 py-2 text-[12.5px] text-ink-2">These are illustrative prototype thresholds, not KLDX policy. Production alert thresholds and investor bands would need to be formally agreed by KLDX.</p>
-      <h3 className="eyebrow mb-2">Alert thresholds</h3>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {TH_FIELDS.map((f) => (
-          <label key={f.key} htmlFor={`th-${f.key}`} className="flex flex-col gap-1 text-[12.5px]">
-            <span className="text-ink-2">{f.label} <span className="text-ink-3">({f.unit})</span></span>
-            <input id={`th-${f.key}`} type="number" min={0} value={th[f.key]} onChange={(e) => setTh({ ...th, [f.key]: Number(e.target.value) })}
-              className="num h-9 rounded-lg border border-line bg-surface px-2.5" />
-          </label>
-        ))}
-      </div>
-      <h3 className="eyebrow mb-2 mt-5">Investor value bands (current subscriptions)</h3>
-      <div className="grid grid-cols-3 gap-3">
-        {[0, 1, 2].map((k) => (
-          <label key={k} htmlFor={`band-${k}`} className="flex flex-col gap-1 text-[12.5px]">
-            <span className="text-ink-2">Band {k + 1} lower bound (RM)</span>
-            <input id={`band-${k}`} type="number" min={1000} step={50000} value={b[k]}
-              onChange={(e) => { const n = [...b] as Bands; n[k] = Number(e.target.value); setB(n); }}
-              className="num h-9 rounded-lg border border-line bg-surface px-2.5" />
-          </label>
-        ))}
-      </div>
-      {bandsValid ? (
-        <p className="mt-2 text-[12px] text-ink-3">{bandLabels(b).join(' · ')}</p>
-      ) : (
-        <p className="mt-2 text-[12px] text-crit" role="alert">Band bounds must decrease from band 1 to band 3 and stay above zero.</p>
-      )}
-      <h3 className="eyebrow mb-2 mt-5">Prototype states</h3>
-      <label className="flex items-center gap-2 text-[13px]">
-        <input type="checkbox" checked={demoError} onChange={(e) => dispatch({ type: 'demoError', value: e.target.checked })} />
-        Simulate an unavailable data feed (shows the error state on the Technology page)
-      </label>
-    </Modal>
-  );
-}
-

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SeverityBadge, StatusBadge, toneFor } from '../components/ui/Badge';
 import { DataTable } from '../components/ui/DataTable';
 import { KpiCard, deltaTarget } from '../components/ui/KpiCard';
-import { Card, Chips, ErrorState, Select, Tabs } from '../components/ui/Primitives';
+import { Card, Chips, Select, Tabs } from '../components/ui/Primitives';
 import { daysBetween, AS_OF, daysFromAsOf } from '../data/asOf';
 import { AVAILABILITY, CYBER_RISKS, INCIDENTS, RESILIENCE } from '../data/tech';
 import type { CyberRisk, Incident } from '../data/types';
@@ -13,7 +13,7 @@ import { useApp, useParam } from '../state/AppState';
 const SEV_ORDER = ['Critical', 'High', 'Medium', 'Low'];
 
 export function TechnologyPage() {
-  const { openDrawer, demoError, dispatch, params } = useApp();
+  const { openDrawer, params } = useApp();
   const [sev, setSev] = useParam('severity');
   const [scope, setScope] = useParam('scope', 'open');
   const [cell, setCell] = useState<string | null>(null);
@@ -94,10 +94,6 @@ export function TechnologyPage() {
       </div>
 
       <Card id="resilience" className={`scroll-mt-36 ${params.section === 'resilience' ? 'ring-2 ring-accent/40' : ''}`} title="Resilience">
-        {demoError ? (
-          <ErrorState title="Resilience measures could not be loaded" body="The synthetic resilience feed is switched off in Demo settings to show this error state. In production this card would show when the source was last updated and who to contact."
-            onRetry={() => dispatch({ type: 'demoError', value: false })} />
-        ) : (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <ul className="divide-y divide-line">
               {RESILIENCE.map((m) => (
@@ -135,7 +131,6 @@ export function TechnologyPage() {
               </ul>
             </div>
           </div>
-        )}
       </Card>
     </div>
   );

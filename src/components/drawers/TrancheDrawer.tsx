@@ -12,7 +12,7 @@ import { Drawer, DrawerSection, NeedsLine } from '../ui/Drawer';
 import { Field, InfoTip, Progress } from '../ui/Primitives';
 
 export function TrancheDrawer({ id, onClose }: { id: string; onClose: () => void }) {
-  const { thresholds, role, openDrawer } = useApp();
+  const { thresholds, openDrawer } = useApp();
   const t = trancheById(id);
   if (!t) return null;
   const s = trancheStats(t, thresholds);
@@ -82,7 +82,7 @@ export function TrancheDrawer({ id, onClose }: { id: string; onClose: () => void
           <DataTable caption="Investors in tranche" dense maxHeight="260px" rows={holders} rowKey={(r) => r.id}
             onRowClick={(r) => openDrawer({ kind: 'investor', id: r.investorId })}
             columns={[
-              { key: 'inv', header: 'Investor', render: (r) => investorLabel(invById.get(r.investorId)!, role), sort: (r) => investorLabel(invById.get(r.investorId)!, role) },
+              { key: 'inv', header: 'Investor', render: (r) => investorLabel(invById.get(r.investorId)!), sort: (r) => investorLabel(invById.get(r.investorId)!) },
               { key: 'amt', header: 'Amount', align: 'right', render: (r) => rm(r.amount), sort: (r) => r.amount },
               { key: 'share', header: 'Share', align: 'right', render: (r) => pct(base ? r.amount / base : 0), sort: (r) => r.amount },
             ]} initialSort={{ key: 'amt', dir: 'desc' }} />

@@ -3,7 +3,7 @@ import { INVESTORS, TRANSACTIONS } from '../../data/investors';
 import { OBLIGATIONS } from '../../data/obligations';
 import { CYBER_RISKS, INCIDENTS, RESILIENCE } from '../../data/tech';
 import type { Thresholds } from '../../data/thresholds';
-import type { GovItem, Role, Severity } from '../../data/types';
+import type { GovItem, Severity } from '../../data/types';
 import { date, rm, rmShort } from '../format';
 import { investorLabel } from '../identity';
 import type { LinkTarget } from '../nav';
@@ -34,7 +34,7 @@ export const SEVERITY_RANK: Record<Severity, number> = { Critical: 0, High: 1, M
  * Shared cross-domain alert model. Rules are illustrative demo thresholds (see Settings),
  * not KLDX policy. Each source record produces at most one alert.
  */
-export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[] {
+export function buildAlerts(gov: GovItem[], th: Thresholds): Alert[] {
   const out: Alert[] = [];
   const alertedTranches = new Set<string>();
 
@@ -146,7 +146,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds, role: Role): Alert[]
   for (const t of TRANSACTIONS.filter((x) => x.type === 'Top-up' && x.status === 'Failed' && x.amount >= th.highValueTopUp && x.date >= since)) {
     const inv = INVESTORS.find((i) => i.id === t.investorId)!;
     out.push({
-      id: `AL-${t.id}`, severity: 'High', title: `${rm(t.amount)} top-up failed — ${investorLabel(inv, role)}`,
+      id: `AL-${t.id}`, severity: 'High', title: `${rm(t.amount)} top-up failed — ${investorLabel(inv)}`,
       headline: `${rmShort(t.amount).replace(/ million$/, 'm')} top-up failed`, area: 'Investors',
       owner: 'Head of Investor Operations', date: t.date, dateKind: 'since', action: `Investigate: ${t.note ?? 'failure reason'}.`,
       link: { page: 'investors', drawer: { kind: 'investor', id: inv.id } },

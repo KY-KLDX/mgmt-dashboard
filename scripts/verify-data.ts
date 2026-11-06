@@ -73,16 +73,12 @@ check('Overdue obligations have due < as-of', OBLIGATIONS.filter(obligationOverd
 check('Several overdue governance items', GOVERNANCE.filter(govOverdue).length >= 2);
 check('Several blocked governance items', GOVERNANCE.filter((g) => govOpen(g) && g.blocker).length >= 2);
 check('Some items completed on time', GOVERNANCE.filter((g) => g.completedOn && g.completedOn <= g.targetDate).length >= 2);
-const alertsBefore = buildAlerts(GOVERNANCE, th, 'CEO');
+const alertsBefore = buildAlerts(GOVERNANCE, th);
 const closedGov = GOVERNANCE.map((g) => (g.id === 'GOV-114' ? { ...g, stage: 'Closed' as const } : g));
-const alertsAfter = buildAlerts(closedGov, th, 'CEO');
+const alertsAfter = buildAlerts(closedGov, th);
 check('Closing an item removes it from critical count',
   alertsAfter.filter((a) => a.severity === 'Critical').length === alertsBefore.filter((a) => a.severity === 'Critical').length - 1);
 check('No alerts for closed governance items', alertsBefore.every((a) => !a.id.startsWith('AL-GOV') || govOpen(GOVERNANCE.find((g) => `AL-${g.id}` === a.id)!)));
-
-// Role masking in derived text
-const mgmtText = JSON.stringify(buildAlerts(GOVERNANCE, th, 'Management'));
-check('Management View alerts contain no investor names', INVESTORS.every((i) => !mgmtText.includes(i.name)));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

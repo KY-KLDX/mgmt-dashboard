@@ -3,7 +3,7 @@ import { ISSUERS } from '../../data/issuers';
 import { OBLIGATIONS } from '../../data/obligations';
 import { CYBER_RISKS, INCIDENTS } from '../../data/tech';
 import { TRANCHES } from '../../data/tranches';
-import type { GovItem, Role } from '../../data/types';
+import type { GovItem } from '../../data/types';
 import { investorLabel, investorMatches, investorSubLabel } from '../identity';
 import type { LinkTarget } from '../nav';
 import { issuerShort } from './finance';
@@ -18,7 +18,7 @@ export interface SearchResult {
 
 const has = (s: string, q: string) => s.toLowerCase().includes(q);
 
-export function search(q: string, role: Role, gov: GovItem[]): SearchResult[] {
+export function search(q: string, gov: GovItem[]): SearchResult[] {
   const s = q.trim().toLowerCase();
   if (s.length < 2) return [];
   const out: SearchResult[] = [];
@@ -31,8 +31,8 @@ export function search(q: string, role: Role, gov: GovItem[]): SearchResult[] {
       out.push({ key: i.id, group: 'Issuers', title: i.name, sub: `${i.sector} · ${i.status}`, link: { page: 'issuers', drawer: { kind: 'issuer', id: i.id } } });
   }
   for (const inv of INVESTORS) {
-    if (investorMatches(inv, s, role))
-      out.push({ key: inv.id, group: 'Investors', title: investorLabel(inv, role), sub: `${investorSubLabel(inv, role)} · ${inv.accountStatus}`, link: { page: 'investors', drawer: { kind: 'investor', id: inv.id } } });
+    if (investorMatches(inv, s))
+      out.push({ key: inv.id, group: 'Investors', title: investorLabel(inv), sub: `${investorSubLabel(inv)} · ${inv.accountStatus}`, link: { page: 'investors', drawer: { kind: 'investor', id: inv.id } } });
   }
   for (const i of INCIDENTS) {
     if (has(i.title, s) || has(i.id, s) || has(i.service, s))

@@ -75,7 +75,7 @@ export type AccountStatus =
   | 'Under review';
 
 export interface Investor {
-  id: string; // anonymised ID, e.g. INV-1047
+  id: string; // investor ID, e.g. INV-1047
   /** Fictional display name. Only ever read through lib/identity.ts. */
   name: string;
   type: 'Individual' | 'Corporate';

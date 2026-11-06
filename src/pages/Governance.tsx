@@ -51,7 +51,7 @@ function govColumns(compact = false): Column<GovItem>[] {
 }
 
 export function GovernancePage() {
-  const { governance, role, mgmtOwner, dispatch, openDrawer, setParams } = useApp();
+  const { governance, openDrawer, setParams } = useApp();
   const [tab] = useParam('tab', 'mine');
   const [q, setQ] = useState('');
   const [category, setCategory] = useParam('category');
@@ -73,9 +73,7 @@ export function GovernancePage() {
   };
   const goKpi = (key: string) => setParams({ tab: 'all', kpi: key });
 
-  const mine = governance.filter((g) => (role === 'CEO'
-    ? g.body === 'CEO' || g.owner === 'CEO' || (g.blocker ?? '').includes('CEO')
-    : g.owner === mgmtOwner));
+  const mine = governance.filter((g) => g.body === 'CEO' || g.owner === 'CEO' || (g.blocker ?? '').includes('CEO'));
 
   const filterAll = (rows: GovItem[]) => rows.filter((g) => {
     if (kpi && !KPI_SETS[kpi]?.ids.has(g.id)) return false;
@@ -128,10 +126,7 @@ export function GovernancePage() {
       </div>
 
       {activeTab === 'mine' && (
-        <Card bodyClass="p-0" title={role === 'CEO' ? 'My Actions · CEO' : `My Actions · ${mgmtOwner}`}
-          actions={role === 'Management' ? (
-            <Select id="persona" label="Viewing as" value={mgmtOwner} onChange={(v) => dispatch({ type: 'mgmtOwner', value: v })} options={OWNERS.filter((o) => o !== 'CEO').map((o) => ({ value: o, label: o }))} />
-          ) : undefined}>
+        <Card bodyClass="p-0" title="My Actions · CEO">
           <DataTable caption="My actions" rows={[...mine].sort((a, b) => Number(govOpen(b)) - Number(govOpen(a)))} rowKey={(g) => g.id} onRowClick={open} columns={govColumns(true)}
             initialSort={{ key: 'days', dir: 'asc' }}
             empty={<EmptyState title="Nothing assigned to you" body="No governance items list you as the accountable owner. Choose another department head above." />} />

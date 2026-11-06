@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
 import { GOVERNANCE } from '../data/governance';
 import { DEFAULT_BANDS, DEFAULT_THRESHOLDS, type Bands, type Thresholds } from '../data/thresholds';
-import type { GovItem, Role } from '../data/types';
+import type { GovItem } from '../data/types';
 import { AS_OF, AS_OF_TIME } from '../data/asOf';
 import { PAGES, type DrawerRef, type LinkTarget, type PageKey } from '../lib/nav';
-import { buildPeriod, type Period, type PeriodKey, type Range } from '../lib/period';
+import { DEFAULT_PERIOD, buildPeriod, type Period, type PeriodKey, type Range } from '../lib/period';
 import { buildAlerts, type Alert } from '../lib/selectors/alerts';
 
-export type ModalKind = 'search' | 'export' | 'dictionary' | 'settings' | 'notifications' | null;
+export type ModalKind = 'export' | 'dictionary' | 'notifications' | null;
 
 export interface Toast {
   id: number;
@@ -16,39 +16,30 @@ export interface Toast {
 }
 
 interface State {
-  role: Role;
   periodKey: PeriodKey;
   custom: Range;
   thresholds: Thresholds;
   bands: Bands;
   governance: GovItem[];
-  /** Management View persona used for "My Actions". */
-  mgmtOwner: string;
   page: PageKey;
   params: Record<string, string>;
   drawer: DrawerRef | null;
   modal: ModalKind;
   toasts: Toast[];
-  demoError: boolean;
   navCollapsed: boolean;
   /** Alert ids the viewer has marked as seen (demo, browser memory only). */
   seen: string[];
 }
 
 type Action =
-  | { type: 'role'; role: Role }
   | { type: 'period'; key: PeriodKey; custom?: Range }
-  | { type: 'thresholds'; value: Thresholds }
-  | { type: 'bands'; value: Bands }
   | { type: 'gov'; id: string; patch: Partial<GovItem>; log: string; by: string }
-  | { type: 'mgmtOwner'; value: string }
   | { type: 'navigate'; target: LinkTarget }
   | { type: 'params'; params: Record<string, string> }
   | { type: 'drawer'; drawer: DrawerRef | null }
   | { type: 'modal'; modal: ModalKind }
   | { type: 'toast'; toast: Toast }
   | { type: 'dismissToast'; id: number }
-  | { type: 'demoError'; value: boolean }
   | { type: 'toggleNav' }
   | { type: 'markSeen'; ids: string[] };
 
@@ -64,32 +55,23 @@ function readHash(): { page: PageKey; params: Record<string, string> } {
 }
 
 const initial = (): State => ({
-  role: 'CEO',
-  periodKey: 'MTD',
+  periodKey: DEFAULT_PERIOD,
   custom: { start: '2026-08-01', end: AS_OF },
   thresholds: DEFAULT_THRESHOLDS,
   bands: DEFAULT_BANDS,
   governance: GOVERNANCE,
-  mgmtOwner: 'Head of Compliance',
   ...readHash(),
   drawer: null,
   modal: null,
   toasts: [],
-  demoError: false,
   navCollapsed: false,
   seen: [],
 });
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
-    case 'role':
-      return { ...s, role: a.role };
     case 'period':
       return { ...s, periodKey: a.key, custom: a.custom ?? s.custom };
-    case 'thresholds':
-      return { ...s, thresholds: a.value };
-    case 'bands':
-      return { ...s, bands: a.value };
     case 'gov':
       return {
         ...s,
@@ -99,8 +81,6 @@ function reducer(s: State, a: Action): State {
             : g,
         ),
       };
-    case 'mgmtOwner':
-      return { ...s, mgmtOwner: a.value };
     case 'navigate':
       return { ...s, page: a.target.page, params: a.target.params ?? {}, drawer: a.target.drawer ?? null, modal: null };
     case 'params':
@@ -113,8 +93,6 @@ function reducer(s: State, a: Action): State {
       return { ...s, toasts: [...s.toasts.slice(-2), a.toast] };
     case 'dismissToast':
       return { ...s, toasts: s.toasts.filter((t) => t.id !== a.id) };
-    case 'demoError':
-      return { ...s, demoError: a.value };
     case 'toggleNav':
       return { ...s, navCollapsed: !s.navCollapsed };
     case 'markSeen':
@@ -140,7 +118,7 @@ let toastSeq = 1;
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initial);
   const period = useMemo(() => buildPeriod(state.periodKey, state.custom), [state.periodKey, state.custom]);
-  const alerts = useMemo(() => buildAlerts(state.governance, state.thresholds, state.role), [state.governance, state.thresholds, state.role]);
+  const alerts = useMemo(() => buildAlerts(state.governance, state.thresholds), [state.governance, state.thresholds]);
 
   useEffect(() => {
     try {
@@ -171,7 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: Ctx = {
     ...state, period, alerts, dispatch, navigate, setParams, openDrawer, closeDrawer, toast,
-    actor: state.role === 'CEO' ? 'CEO (demo)' : `${state.mgmtOwner} (demo)`,
+    actor: 'KLDX Management (demo)',
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

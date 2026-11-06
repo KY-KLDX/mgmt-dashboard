@@ -54,16 +54,11 @@ function Shell() {
 }
 
 function MobileNav() {
-  const { page, navigate, role, dispatch } = useApp();
+  const { page, navigate } = useApp();
   return (
     <div className="flex items-center gap-3 bg-rail px-4 py-2.5 text-rail-ink lg:hidden">
       <span className="mr-auto font-display text-[17px] font-semibold">KLDX</span>
       <label htmlFor="mobile-nav" className="sr-only">Page</label>
-      <label htmlFor="mobile-role" className="sr-only">Demo role</label>
-      <select id="mobile-role" value={role} onChange={(e) => dispatch({ type: 'role', role: e.target.value as 'CEO' | 'Management' })} className="h-8 w-[30vw] min-w-0 rounded-md bg-rail-hover px-2 text-[13px] text-rail-ink">
-        <option value="CEO">CEO view</option>
-        <option value="Management">Management view</option>
-      </select>
       <select id="mobile-nav" value={page} onChange={(e) => navigate({ page: e.target.value as typeof page })} className="h-8 w-[40vw] min-w-0 rounded-md bg-rail-hover px-2 text-[13px] text-rail-ink">
         <option value="overview">Executive Overview</option>
         <option value="finance">Finance & Tranches</option>

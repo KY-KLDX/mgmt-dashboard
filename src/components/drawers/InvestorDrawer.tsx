@@ -11,7 +11,7 @@ import { Drawer, DrawerSection, NeedsLine } from '../ui/Drawer';
 import { Field, InfoTip } from '../ui/Primitives';
 
 export function InvestorDrawer({ id, onClose }: { id: string; onClose: () => void }) {
-  const { role, openDrawer } = useApp();
+  const { openDrawer } = useApp();
   const inv = INVESTORS.find((i) => i.id === id);
   if (!inv) return null;
   const m = investorMetrics(inv);
@@ -19,7 +19,7 @@ export function InvestorDrawer({ id, onClose }: { id: string; onClose: () => voi
   const current = m.subs.filter((s) => isCurrentAt(s, AS_OF));
 
   return (
-    <Drawer open onClose={onClose} title={investorLabel(inv, role)} eyebrow={role === 'CEO' ? inv.id : 'Anonymised investor'}
+    <Drawer open onClose={onClose} title={investorLabel(inv)} eyebrow={inv.id}
       headerExtra={<>
         <StatusBadge status={inv.accountStatus} />
         <StatusBadge status={`CTOS ${inv.ctos.toLowerCase()}`} />
