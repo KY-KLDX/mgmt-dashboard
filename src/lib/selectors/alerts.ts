@@ -11,7 +11,7 @@ import { allTrancheStats } from './finance';
 import { isCtosIncomplete, isKycIncomplete, onboardingAge } from './investors';
 import { govDecision, govOpen, govOverdue, govPrepMissed, incidentOpen, obligationOpen, obligationOverdue, riskOverdue, riskRating } from './ops';
 
-export type Area = 'Finance & Tranches' | 'Investors' | 'Issuers' | 'Technology' | 'Governance';
+export type Area = 'Finance' | 'Investors' | 'Issuers' | 'Technology' | 'Governance';
 
 export interface Alert {
   id: string;
@@ -48,7 +48,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds): Alert[] {
       id: `AL-${s.tranche.id}`, severity: p < th.trancheCriticalPct ? 'Critical' : 'High',
       title: `${s.tranche.name} closing in ${s.daysToClose} days at ${Math.round(p)}% of target`,
       headline: `${s.tranche.name.replace(/ Note \d+$/, '')} at ${Math.round(p)}%`,
-      area: 'Finance & Tranches', owner: 'Head of Issuer Origination', date: s.tranche.closeDate, dateKind: 'due',
+      area: 'Finance', owner: 'Head of Issuer Origination', date: s.tranche.closeDate, dateKind: 'due',
       action: 'Decide: extend offer period, downsize issuance or close as scheduled.',
       link: { page: 'finance', drawer: { kind: 'tranche', id: s.tranche.id } },
     });

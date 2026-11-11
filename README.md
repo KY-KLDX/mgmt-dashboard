@@ -33,7 +33,7 @@ React 18 · TypeScript (strict) · Vite · Tailwind CSS · Recharts · lucide-re
 Each page shows at most four KPI cards. Supporting detail sits behind the (i) icon on each card.
 
 1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, subscription progress for live and upcoming tranches, an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
-2. **Finance & Tranches**: tranche pipeline, filterable tranche table, monthly subscriptions, monthly company P&L.
+2. **Finance**: tranche pipeline, filterable tranche table, monthly subscriptions, monthly company P&L.
 3. **Investors**: four headline cards, onboarding funnel (CTOS and KYC as separate stages), value bands, a **recent activity** feed (onboarding steps, subscriptions, investor top-ups, back-office manual deposits, withdrawals and profile updates such as investor-type, contact, bank-account and address/ID changes) and **priority exceptions** (failed top-ups, onboarding stalls, KYC aging, accounts under review). Charts, exceptions and "View all" links open investor lists.
 4. **Issuers & Obligations**: 30/60/90-day timeline and obligations table.
 5. **Technology & Cyber Risk**: incidents, top five risks with a linked risk matrix, resilience measures.

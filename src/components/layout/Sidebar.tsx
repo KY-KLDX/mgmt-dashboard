@@ -7,7 +7,7 @@ const ICONS: Record<PageKey, typeof Home> = {
   overview: Home, finance: Landmark, investors: Users, issuers: Building2, technology: Cpu, governance: ScrollText,
 };
 const AREA: Partial<Record<PageKey, Area>> = {
-  finance: 'Finance & Tranches', investors: 'Investors', issuers: 'Issuers', technology: 'Technology', governance: 'Governance',
+  finance: 'Finance', investors: 'Investors', issuers: 'Issuers', technology: 'Technology', governance: 'Governance',
 };
 
 export function Sidebar() {
