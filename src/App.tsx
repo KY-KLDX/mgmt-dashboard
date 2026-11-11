@@ -63,9 +63,9 @@ function MobileNav() {
         <option value="overview">Executive Overview</option>
         <option value="finance">Finance</option>
         <option value="investors">Investors</option>
-        <option value="issuers">Issuers & Obligations</option>
-        <option value="technology">Technology & Cyber Risk</option>
-        <option value="governance">Governance & Actions</option>
+        <option value="issuers">Issuers</option>
+        <option value="technology">Technology</option>
+        <option value="governance">Governance</option>
       </select>
     </div>
   );

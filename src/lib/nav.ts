@@ -16,7 +16,7 @@ export const PAGES: { key: PageKey; label: string; title: string }[] = [
   { key: 'overview', label: 'Executive Overview', title: 'Executive Overview' },
   { key: 'finance', label: 'Finance', title: 'Finance' },
   { key: 'investors', label: 'Investors', title: 'Investors' },
-  { key: 'issuers', label: 'Issuers & Obligations', title: 'Issuers & Obligations' },
-  { key: 'technology', label: 'Technology & Cyber Risk', title: 'Technology & Cyber Risk' },
-  { key: 'governance', label: 'Governance & Actions', title: 'Governance & Management Actions' },
+  { key: 'issuers', label: 'Issuers', title: 'Issuers' },
+  { key: 'technology', label: 'Technology', title: 'Technology' },
+  { key: 'governance', label: 'Governance', title: 'Governance' },
 ];
