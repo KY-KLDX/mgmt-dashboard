@@ -1,10 +1,9 @@
-import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CalendarDays, ChevronRight, Coins, ListChecks, Target, User, Users, UsersRound, type LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { AlertTriangle, CalendarDays, ChevronRight, Coins, ListChecks, Target, User, Users, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
-import { Sparkline } from '../components/charts/Sparkline';
+import { HeroKpi, Panel } from '../components/ui/Showcase';
 import { DataTable } from '../components/ui/DataTable';
-import { MoneyValue, deltaAbs, deltaPct, type KpiDelta } from '../components/ui/KpiCard';
+import { deltaAbs, deltaPct } from '../components/ui/KpiCard';
 import { Progress } from '../components/ui/Primitives';
 import { AS_OF, TREND_MONTHS, daysFromAsOf, monthEnd } from '../data/asOf';
 import { date, int, pct, rm, rmShort } from '../lib/format';
@@ -23,45 +22,6 @@ export function shortTitle(a: Alert): string {
     .replace(/ — (overdue|blocked|awaiting CEO decision|preparation deadline missed|\d+% ready for Board)$/, '')
     .replace(/^(Critical|High) cyber risk with overdue treatment: /, 'Cyber risk: ')
     .replace(/ \(synthetic\)$/, '');
-}
-
-const TILE: Record<'blue' | 'teal' | 'violet', { tile: string; line: string }> = {
-  blue: { tile: 'bg-info-soft text-info', line: 'rgb(var(--info))' },
-  teal: { tile: 'bg-good-soft text-good', line: 'var(--series-2)' },
-  violet: { tile: 'bg-violet-soft text-violet', line: 'rgb(var(--violet))' },
-};
-
-function HeroKpi({ icon: Icon, tone, label, value, delta, spark, onClick, info }: {
-  icon: LucideIcon; tone: keyof typeof TILE; label: string; value: string; delta?: KpiDelta; spark: number[]; onClick: () => void; info: string;
-}) {
-  const D = delta?.direction === 'up' ? ArrowUpRight : delta?.direction === 'down' ? ArrowDownRight : ArrowRight;
-  const dcls = delta?.good === true ? 'text-good' : delta?.good === false ? 'text-crit' : 'text-ink-3';
-  return (
-    <button onClick={onClick} title={info} aria-label={`${label}: ${value}. ${info}`}
-      className="card flex min-w-0 items-center gap-4 px-5 py-5 text-left transition-shadow hover:shadow-lift">
-      <span className={`grid h-14 w-14 shrink-0 place-items-center self-start rounded-2xl ${TILE[tone].tile}`}><Icon size={26} aria-hidden /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-ink">{label}</span>
-        <span className="num mt-1 block whitespace-nowrap font-display text-[30px] font-semibold leading-tight tracking-tight"><MoneyValue v={value} /></span>
-        {delta && <span className={`mt-1 flex items-center gap-1 whitespace-nowrap text-[13.5px] font-semibold ${dcls}`}><D size={16} aria-hidden />{delta.text}</span>}
-      </span>
-      <span className="hidden self-end sm:block"><Sparkline values={spark} width={84} height={48} color={TILE[tone].line} /></span>
-    </button>
-  );
-}
-
-function Panel({ icon: Icon, title, children, iconTile = false }: { icon: LucideIcon; title: string; children: ReactNode; iconTile?: boolean }) {
-  return (
-    <section className="card flex h-full min-w-0 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-3 px-6 pb-3 pt-5">
-        {iconTile
-          ? <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-soft text-violet"><Icon size={20} aria-hidden /></span>
-          : <Icon size={24} className="text-ink" aria-hidden />}
-        <h2 className="font-display text-[21px] font-semibold tracking-tight">{title}</h2>
-      </header>
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-    </section>
-  );
 }
 
 function statusOf(s: TrancheStats): { label: string; cls: string } {
@@ -104,9 +64,9 @@ export function OverviewPage() {
   // Investor snapshot: every registered investor in exactly one group.
   const all = allInvestorMetrics();
   const groups = [
-    { key: 'active', label: 'Active investors', sub: 'Hold a current subscription', n: all.filter((m) => m.currentCount > 0).length, color: 'var(--series-2)', link: { page: 'investors' } as LinkTarget },
-    { key: 'idle', label: 'Approved, not invested', sub: 'Verified, no current subscription', n: all.filter((m) => m.currentCount === 0 && m.inv.approvedOn).length, color: 'var(--series-1)', link: { page: 'investors', params: { tab: 'deposits' } } as LinkTarget },
-    { key: 'pending', label: 'Not yet verified', sub: 'Onboarding or awaiting approval', n: all.filter((m) => !m.inv.approvedOn).length, color: 'var(--series-muted)', link: { page: 'investors', params: { stage: 'incomplete' } } as LinkTarget },
+    { key: 'active', label: 'Active investors', sub: 'Hold a current subscription', n: all.filter((m) => m.currentCount > 0).length, color: 'var(--series-2)', link: { page: 'investors', drawer: { kind: 'investorList', id: 'group:active' } } as LinkTarget },
+    { key: 'idle', label: 'Approved, not invested', sub: 'Verified, no current subscription', n: all.filter((m) => m.currentCount === 0 && m.inv.approvedOn).length, color: 'var(--series-1)', link: { page: 'investors', drawer: { kind: 'investorList', id: 'group:idle' } } as LinkTarget },
+    { key: 'pending', label: 'Not yet verified', sub: 'Onboarding or awaiting approval', n: all.filter((m) => !m.inv.approvedOn).length, color: 'var(--series-muted)', link: { page: 'investors', drawer: { kind: 'investorList', id: 'group:pending' } } as LinkTarget },
   ];
   const total = groups.reduce((a, g) => a + g.n, 0);
 
@@ -191,7 +151,7 @@ export function OverviewPage() {
         </div>
 
         <div className="min-w-0 xl:col-span-5">
-          <Panel icon={CalendarDays} title="Upcoming milestones" iconTile>
+          <Panel icon={CalendarDays} title="Upcoming milestones" iconTile="violet">
             <ol className="relative px-6 pb-4">
               {milestones.map((m, i) => (
                 <li key={m.id} className="relative">

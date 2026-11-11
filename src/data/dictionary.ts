@@ -84,6 +84,19 @@ export const DICTIONARY: MetricDef[] = [
     caveat: 'Records still at the CTOS stage are counted under CTOS Incomplete only, to avoid double counting.',
   },
   {
+    term: 'Top-up', definition: 'Money added to the wallet by the investor through an automated channel (FPX or DuitNow).',
+    calculation: 'Top-up transactions with channel "Investor".', category: 'Investors', source: 'Payment gateway + wallet ledger (placeholder)', refresh: 'Real time (production)', owner: TBC,
+  },
+  {
+    term: 'Manual Deposit', definition: 'Money credited to an investor wallet by the back office, for example after a bank transfer is reconciled.',
+    calculation: 'Top-up transactions with channel "Manual". Counted in Total Money Deposited.', category: 'Investors', source: 'Back-office ledger (placeholder)', refresh: 'Daily', owner: TBC,
+  },
+  {
+    term: 'Profile Update', definition: 'A change to an existing investor record: investor type, contact details, bank account, or address / ID.',
+    calculation: 'Profile-change events. Values for contact, bank and ID data are never shown.', category: 'Investors', source: 'Investor admin audit log (placeholder)', refresh: 'Real time (production)', owner: TBC,
+    caveat: 'A bank-account change is held for review before the next withdrawal, because it is a common fraud signal.',
+  },
+  {
     term: 'Failed Top-Up', definition: 'A top-up transaction with a final failed status, excluding pending transactions.',
     calculation: 'Count and value of top-ups with status "Failed" dated in the period.', category: 'Investors', source: 'Payment gateway + wallet ledger (placeholder)', refresh: 'Daily', owner: TBC,
   },

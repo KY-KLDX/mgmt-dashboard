@@ -1,6 +1,7 @@
 import { useApp } from '../../state/AppState';
 import { GovernanceDrawer } from './GovernanceDrawer';
 import { InvestorDrawer } from './InvestorDrawer';
+import { InvestorListDrawer } from './InvestorListDrawer';
 import { IncidentDrawer, IssuerDrawer, RiskDrawer } from './OpsDrawers';
 import { TrancheDrawer } from './TrancheDrawer';
 
@@ -15,5 +16,6 @@ export function DrawerHost() {
     case 'incident': return <IncidentDrawer {...p} />;
     case 'risk': return <RiskDrawer {...p} />;
     case 'governance': return <GovernanceDrawer {...p} />;
+    case 'investorList': return <InvestorListDrawer {...p} />;
   }
 }

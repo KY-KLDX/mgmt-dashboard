@@ -102,6 +102,21 @@ export interface Transaction {
   date: ISODate;
   status: TxnStatus;
   note?: string;
+  /** Money in only: 'Investor' = automated top-up by the investor; 'Manual' = deposit credited by the back office. */
+  channel?: 'Investor' | 'Manual';
+}
+
+export type ProfileChangeType = 'Investor type' | 'Contact details' | 'Bank account' | 'Address / ID re-verification';
+
+export interface ProfileChange {
+  id: string;
+  investorId: string;
+  type: ProfileChangeType;
+  date: ISODate;
+  time: string; // HH:MM
+  /** Short description. Never contains the changed values for contact, bank or ID data. */
+  summary: string;
+  status: 'Completed' | 'Pending review';
 }
 
 export interface PnlMonth {

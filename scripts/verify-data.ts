@@ -4,6 +4,8 @@
  */
 import { AS_OF } from '../src/data/asOf';
 import { GOVERNANCE } from '../src/data/governance';
+import { PROFILE_CHANGES } from '../src/data/profileChanges';
+import { allActivity, investorExceptions } from '../src/lib/selectors/activity';
 import { INVESTORS, SUBSCRIPTIONS, TRANSACTIONS } from '../src/data/investors';
 import { ISSUERS } from '../src/data/issuers';
 import { OBLIGATIONS } from '../src/data/obligations';
@@ -79,6 +81,20 @@ const alertsAfter = buildAlerts(closedGov, th);
 check('Closing an item removes it from critical count',
   alertsAfter.filter((a) => a.severity === 'Critical').length === alertsBefore.filter((a) => a.severity === 'Critical').length - 1);
 check('No alerts for closed governance items', alertsBefore.every((a) => !a.id.startsWith('AL-GOV') || govOpen(GOVERNANCE.find((g) => `AL-${g.id}` === a.id)!)));
+
+// Activity feed and investor exceptions
+const okTopups = TRANSACTIONS.filter((t) => t.type === 'Top-up' && t.status === 'Successful');
+check('Every successful top-up has a channel', okTopups.every((t) => t.channel === 'Investor' || t.channel === 'Manual'));
+check('Top-ups + manual deposits = total deposits',
+  okTopups.filter((t) => t.channel === 'Investor').reduce((a, t) => a + t.amount, 0) + okTopups.filter((t) => t.channel === 'Manual').reduce((a, t) => a + t.amount, 0)
+  === metrics.reduce((a, m) => a + m.deposits, 0));
+check('Profile changes reference real investors', PROFILE_CHANGES.every((c) => INVESTORS.some((i) => i.id === c.investorId)));
+check('Profile summaries hide bank/contact values', PROFILE_CHANGES.every((c) => !/\d{6,}|@/.test(c.summary)));
+check('Activity feed covers every profile change', PROFILE_CHANGES.every((c) => allActivity().some((e) => e.id === c.id)));
+const ex = investorExceptions(th);
+check('Failed top-up exception counts last-30-day failures',
+  ex.find((e) => e.key === 'failed')!.count === TRANSACTIONS.filter((t) => t.type === 'Top-up' && t.status === 'Failed' && t.date >= '2026-09-23' && t.date <= AS_OF).length);
+check('Review list includes pending bank changes', PROFILE_CHANGES.filter((c) => c.status === 'Pending review').every((c) => ex.find((e) => e.key === 'review')!.ids.includes(c.investorId)));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

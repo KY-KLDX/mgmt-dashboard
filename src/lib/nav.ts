@@ -1,5 +1,5 @@
 export type PageKey = 'overview' | 'finance' | 'investors' | 'issuers' | 'technology' | 'governance';
-export type DrawerKind = 'tranche' | 'investor' | 'issuer' | 'incident' | 'risk' | 'governance';
+export type DrawerKind = 'tranche' | 'investor' | 'issuer' | 'incident' | 'risk' | 'governance' | 'investorList';
 
 export interface DrawerRef {
   kind: DrawerKind;

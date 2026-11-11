@@ -1,5 +1,6 @@
 import { AS_OF, addDays, daysBetween } from './asOf';
 import { createRng, roundTo } from './prng';
+import { PROFILE_CHANGES } from './profileChanges';
 import { TRANCHES, TRANCHE_FILL } from './tranches';
 import type { Investor, StepStatus, Subscription, Transaction, Tranche } from './types';
 
@@ -311,6 +312,17 @@ for (const [investorId, amount, date] of [
   addTxn({ investorId, type: 'Top-up', amount, date, status: 'Pending', note: 'Awaiting bank confirmation' });
 }
 
+// Money-in channel: bank transfers are credited manually by the back office; FPX and DuitNow are automated.
+for (const t of txns) {
+  if (t.type !== 'Top-up') continue;
+  if (t.status === 'Successful' && t.note === 'Bank transfer') {
+    t.channel = 'Manual';
+    t.note = 'Bank transfer, credited by back office';
+  } else {
+    t.channel = 'Investor';
+  }
+}
+
 txns.sort((a, b) => (a.date < b.date ? -1 : 1));
 
 // ---- Derived account status, issues and last activity ------------------------------------
@@ -352,6 +364,7 @@ for (const d of drafts) {
     inv.approvedOn,
     ...subs.filter((s) => s.investorId === inv.id).map((s) => s.requestedOn),
     ...txns.filter((t) => t.investorId === inv.id && t.date <= AS_OF).map((t) => t.date),
+    ...PROFILE_CHANGES.filter((c) => c.investorId === inv.id).map((c) => c.date),
   ].filter((x): x is string => !!x);
   inv.lastActivity = dates.reduce((a, b) => (b > a ? b : a));
 }

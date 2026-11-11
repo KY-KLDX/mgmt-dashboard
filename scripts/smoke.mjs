@@ -44,6 +44,18 @@ await p.locator('#period').selectOption({ label: 'Year to date 2026' }); await p
 check('Year to date option', (await p.locator('#from').inputValue()) === '2026-01-01');
 check('No demo settings button', (await p.getByRole('button', { name: /Demo settings/ }).count()) === 0);
 
+// Investors page: activity feed and exceptions
+await nav(/Investors/); await p.waitForTimeout(300);
+check('Investors page shows activity feed', await p.getByText('Recent investor activity').isVisible());
+await p.getByRole('tab', { name: 'Profile updates' }).click(); await p.waitForTimeout(150);
+check('Profile updates tab lists investor-type change', await p.evaluate(() => document.body.innerText.includes('Updated investor type')));
+await p.getByRole('button', { name: /Accounts under review/ }).click(); await p.waitForTimeout(300);
+check('Exception row opens an investor list', (await p.locator('[role=dialog] h2').first().innerText()) === 'Accounts under review');
+await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+await p.getByRole('button', { name: /View all activity/ }).click(); await p.waitForTimeout(300);
+check('View all activity opens the full feed', (await p.locator('[role=dialog] h2').first().innerText()) === 'Investor activity');
+await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+
 // Notifications and governance close flow
 const attention = async () => Number((await p.getByRole('button', { name: /Notifications:/ }).getAttribute('aria-label')).match(/\d+/)[0]);
 await nav(/Executive Overview/); await p.waitForTimeout(300);
