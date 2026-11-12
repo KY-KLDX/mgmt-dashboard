@@ -76,8 +76,8 @@ export type AccountStatus =
 
 export interface Investor {
   id: string; // investor ID, e.g. INV-1047
-  /** Fictional display name. Only ever read through lib/identity.ts. */
-  name: string;
+  /** Initials only (e.g. "SFO"). Full names are deliberately not stored in the dashboard. */
+  initials: string;
   type: 'Individual' | 'Corporate';
   registeredOn: ISODate;
   onboardingStartedOn: ISODate | null;

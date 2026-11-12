@@ -4,7 +4,7 @@ import { INVESTORS } from '../../data/investors';
 import { date, rm } from '../../lib/format';
 import { activityIn, type ActivityTab } from '../../lib/selectors/activity';
 import { resolveInvestorList } from '../../lib/selectors/investorLists';
-import { investorShortLabel } from '../../lib/identity';
+import { investorLabel, investorShortLabel } from '../../lib/identity';
 import { allInvestorMetrics } from '../../lib/selectors/investors';
 import { useApp } from '../../state/AppState';
 import { StatusBadge } from '../ui/Badge';
@@ -50,7 +50,7 @@ export function InvestorListDrawer({ id, onClose }: { id: string; onClose: () =>
           <li key={m.inv.id}>
             <button onClick={() => openDrawer({ kind: 'investor', id: m.inv.id })} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-semibold">{m.inv.name}</span>
+                <span className="num block truncate text-[14px] font-semibold">{investorLabel(m.inv)}</span>
                 <span className="block truncate text-[12px] text-ink-3">{m.inv.id} · last activity {date(m.inv.lastActivity)}</span>
               </span>
               <span className="num shrink-0 text-right text-[13px]">{m.current ? rm(m.current) : '—'}</span>

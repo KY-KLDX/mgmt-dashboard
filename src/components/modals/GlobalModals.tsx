@@ -58,7 +58,7 @@ function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           {(['aggregate', 'record'] as const).map((l) => (
             <label key={l} className="flex items-center gap-2 text-[13px]">
               <input type="radio" name="export-level" checked={level === l} onChange={() => setLevel(l)} />
-              {l === 'aggregate' ? 'Aggregates only (bands, counts, totals)' : 'Record level (includes investor names)'}
+              {l === 'aggregate' ? 'Aggregates only (bands, counts, totals)' : 'Record level (investor IDs and initials)'}
             </label>
           ))}
         </fieldset>

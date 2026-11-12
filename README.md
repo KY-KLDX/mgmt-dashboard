@@ -63,7 +63,7 @@ Key rules:
 
 ## Access
 
-There is one view. For privacy, the investor table shows **IDs only** and the activity feed shows **ID plus initials** (e.g. `INV-1017 · SFO`); searching those lists matches IDs, not names. Investor names still appear in the investor detail panel, global search and some alert text, so **access to the page itself must be limited to staff cleared to see investor identities**. In this prototype the full synthetic dataset ships to the browser; a production build must enforce page access on the server.
+There is one view. **The dashboard holds no investor names at all**: only the investor ID and initials. The investor table shows IDs only; everywhere else shows ID plus initials (e.g. `INV-1017 · SFO`), and search matches IDs or initials. Because names are not in the data that reaches the browser, a leaked or hacked page cannot link a person to how much they hold. A production build should keep this rule on the server: send IDs and initials only, keep names in the back-office system of record, and still restrict who can open the dashboard.
 
 ## Header controls
 

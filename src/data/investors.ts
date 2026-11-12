@@ -7,7 +7,8 @@ import type { Investor, StepStatus, Subscription, Transaction, Tranche } from '.
 /*
  * Deterministic generator for synthetic investors, subscriptions and wallet transactions.
  * Tranche subscription totals are built from these records, so every tranche figure,
- * investor figure and KPI reconciles by construction. All names are fictional.
+ * investor figure and KPI reconciles by construction. Only investor IDs and initials are
+ * stored: no names ship to the browser, so a leaked page cannot link a person to holdings.
  */
 
 type Tier = 'whale' | 'large' | 'mid' | 'small';
@@ -21,7 +22,7 @@ type Category =
   | { kind: 'registered' };
 
 interface Seed {
-  name: string;
+  initials: string;
   type: 'Individual' | 'Corporate';
   cat: Category;
   reg: string;
@@ -31,73 +32,73 @@ const A = (tier: Tier): Category => ({ kind: 'active', tier });
 
 const SEEDS: Seed[] = [
   // Active — RM1 million and above
-  { name: 'Bayu Timur Capital Sdn Bhd', type: 'Corporate', cat: A('whale'), reg: '2025-08-12' },
-  { name: 'Lim Kok Seng', type: 'Individual', cat: A('whale'), reg: '2025-08-20' },
-  { name: 'Puncak Waris Holdings Sdn Bhd', type: 'Corporate', cat: A('whale'), reg: '2025-09-03' },
-  { name: 'Nurul Huda Ismail', type: 'Individual', cat: A('whale'), reg: '2025-09-18' },
-  { name: 'Ravindran Pillai', type: 'Individual', cat: A('whale'), reg: '2025-10-07' },
-  { name: 'Sentosa Family Office Sdn Bhd', type: 'Corporate', cat: A('whale'), reg: '2025-11-02' },
-  { name: 'Ong Mei Ling', type: 'Individual', cat: A('whale'), reg: '2025-12-15' },
-  { name: 'Harimau Emas Ventures Sdn Bhd', type: 'Corporate', cat: A('whale'), reg: '2026-02-09' },
-  { name: 'Azman Shafie', type: 'Individual', cat: A('whale'), reg: '2026-03-22' },
+  { initials: 'BTC', type: 'Corporate', cat: A('whale'), reg: '2025-08-12' },
+  { initials: 'LKS', type: 'Individual', cat: A('whale'), reg: '2025-08-20' },
+  { initials: 'PWH', type: 'Corporate', cat: A('whale'), reg: '2025-09-03' },
+  { initials: 'NHI', type: 'Individual', cat: A('whale'), reg: '2025-09-18' },
+  { initials: 'RP', type: 'Individual', cat: A('whale'), reg: '2025-10-07' },
+  { initials: 'SFO', type: 'Corporate', cat: A('whale'), reg: '2025-11-02' },
+  { initials: 'OML', type: 'Individual', cat: A('whale'), reg: '2025-12-15' },
+  { initials: 'HEV', type: 'Corporate', cat: A('whale'), reg: '2026-02-09' },
+  { initials: 'AS', type: 'Individual', cat: A('whale'), reg: '2026-03-22' },
   // Active — RM500k to below RM1m
-  { name: 'Chong Wai Keat', type: 'Individual', cat: A('large'), reg: '2025-08-25' },
-  { name: 'Farah Adlina Yusof', type: 'Individual', cat: A('large'), reg: '2025-09-28' },
-  { name: 'Kenanga Hijau Trading Sdn Bhd', type: 'Corporate', cat: A('large'), reg: '2025-10-30' },
-  { name: 'Suresh Menon', type: 'Individual', cat: A('large'), reg: '2025-12-02' },
-  { name: 'Tan Hui Wen', type: 'Individual', cat: A('large'), reg: '2026-01-14' },
-  { name: 'Mohd Hafiz Zulkifli', type: 'Individual', cat: A('large'), reg: '2026-02-26' },
-  { name: 'Wong Jia Hui', type: 'Individual', cat: A('large'), reg: '2026-04-08' },
-  { name: 'Delima Estates Sdn Bhd', type: 'Corporate', cat: A('large'), reg: '2026-05-19' },
+  { initials: 'CWK', type: 'Individual', cat: A('large'), reg: '2025-08-25' },
+  { initials: 'FAY', type: 'Individual', cat: A('large'), reg: '2025-09-28' },
+  { initials: 'KHT', type: 'Corporate', cat: A('large'), reg: '2025-10-30' },
+  { initials: 'SM', type: 'Individual', cat: A('large'), reg: '2025-12-02' },
+  { initials: 'THW', type: 'Individual', cat: A('large'), reg: '2026-01-14' },
+  { initials: 'MHZ', type: 'Individual', cat: A('large'), reg: '2026-02-26' },
+  { initials: 'WJH', type: 'Individual', cat: A('large'), reg: '2026-04-08' },
+  { initials: 'DE', type: 'Corporate', cat: A('large'), reg: '2026-05-19' },
   // Active — RM100k to below RM500k
-  { name: 'Siti Mariam Abdullah', type: 'Individual', cat: A('mid'), reg: '2025-09-09' },
-  { name: 'Goh Chee Keong', type: 'Individual', cat: A('mid'), reg: '2025-10-21' },
-  { name: 'Kavitha Rajan', type: 'Individual', cat: A('mid'), reg: '2025-11-26' },
-  { name: 'Amirul Hakim Rosli', type: 'Individual', cat: A('mid'), reg: '2026-01-06' },
-  { name: 'Yap Siew Lan', type: 'Individual', cat: A('mid'), reg: '2026-02-17' },
-  { name: 'Norazlina Hamid', type: 'Individual', cat: A('mid'), reg: '2026-03-30' },
-  { name: 'Leong Kar Wai', type: 'Individual', cat: A('mid'), reg: '2026-05-04' },
-  { name: 'Deepa Krishnan', type: 'Individual', cat: A('mid'), reg: '2026-06-15' },
-  { name: 'Zainal Arifin Omar', type: 'Individual', cat: A('mid'), reg: '2026-07-20' },
-  { name: 'Teoh Boon Huat', type: 'Individual', cat: A('mid'), reg: '2026-08-11' },
-  { name: 'Melati Kasih Enterprise', type: 'Corporate', cat: A('mid'), reg: '2026-08-26' },
+  { initials: 'SMA', type: 'Individual', cat: A('mid'), reg: '2025-09-09' },
+  { initials: 'GCK', type: 'Individual', cat: A('mid'), reg: '2025-10-21' },
+  { initials: 'KR', type: 'Individual', cat: A('mid'), reg: '2025-11-26' },
+  { initials: 'AHR', type: 'Individual', cat: A('mid'), reg: '2026-01-06' },
+  { initials: 'YSL', type: 'Individual', cat: A('mid'), reg: '2026-02-17' },
+  { initials: 'NH', type: 'Individual', cat: A('mid'), reg: '2026-03-30' },
+  { initials: 'LKW', type: 'Individual', cat: A('mid'), reg: '2026-05-04' },
+  { initials: 'DK', type: 'Individual', cat: A('mid'), reg: '2026-06-15' },
+  { initials: 'ZAO', type: 'Individual', cat: A('mid'), reg: '2026-07-20' },
+  { initials: 'TBH', type: 'Individual', cat: A('mid'), reg: '2026-08-11' },
+  { initials: 'MK', type: 'Corporate', cat: A('mid'), reg: '2026-08-26' },
   // Active — below RM100k
-  { name: 'Aisyah Kamarudin', type: 'Individual', cat: A('small'), reg: '2025-10-14' },
-  { name: 'Lee Zhi Hao', type: 'Individual', cat: A('small'), reg: '2026-01-20' },
-  { name: 'Prakash Subramaniam', type: 'Individual', cat: A('small'), reg: '2026-03-05' },
-  { name: 'Nur Izzati Hassan', type: 'Individual', cat: A('small'), reg: '2026-04-27' },
-  { name: 'Chan Kah Yee', type: 'Individual', cat: A('small'), reg: '2026-06-02' },
-  { name: 'Haziq Firdaus Ahmad', type: 'Individual', cat: A('small'), reg: '2026-07-08' },
-  { name: 'Low Pei Shan', type: 'Individual', cat: A('small'), reg: '2026-08-18' },
-  { name: 'Arjun Nadarajah', type: 'Individual', cat: A('small'), reg: '2026-09-01' },
-  { name: 'Syafiqah Rahim', type: 'Individual', cat: A('small'), reg: '2026-09-08' },
+  { initials: 'AK', type: 'Individual', cat: A('small'), reg: '2025-10-14' },
+  { initials: 'LZH', type: 'Individual', cat: A('small'), reg: '2026-01-20' },
+  { initials: 'PS', type: 'Individual', cat: A('small'), reg: '2026-03-05' },
+  { initials: 'NIH', type: 'Individual', cat: A('small'), reg: '2026-04-27' },
+  { initials: 'CKY', type: 'Individual', cat: A('small'), reg: '2026-06-02' },
+  { initials: 'HFA', type: 'Individual', cat: A('small'), reg: '2026-07-08' },
+  { initials: 'LPS', type: 'Individual', cat: A('small'), reg: '2026-08-18' },
+  { initials: 'AN', type: 'Individual', cat: A('small'), reg: '2026-09-01' },
+  { initials: 'SR', type: 'Individual', cat: A('small'), reg: '2026-09-08' },
   // Funded, no current subscription
-  { name: 'Khoo Teng Chuan', type: 'Individual', cat: { kind: 'funded' }, reg: '2025-09-01' },
-  { name: 'Rosnah Mat Isa', type: 'Individual', cat: { kind: 'funded' }, reg: '2025-10-05' },
-  { name: 'Vijay Ananthan', type: 'Individual', cat: { kind: 'funded' }, reg: '2025-11-11' },
-  { name: 'Lau Siew Ping', type: 'Individual', cat: { kind: 'funded' }, reg: '2026-05-25' },
-  { name: 'Ikhwan Nazri', type: 'Individual', cat: { kind: 'funded' }, reg: '2026-07-29' },
-  { name: 'Sri Mutiara Resources Sdn Bhd', type: 'Corporate', cat: { kind: 'funded' }, reg: '2026-09-15' },
+  { initials: 'KTC', type: 'Individual', cat: { kind: 'funded' }, reg: '2025-09-01' },
+  { initials: 'RMI', type: 'Individual', cat: { kind: 'funded' }, reg: '2025-10-05' },
+  { initials: 'VA', type: 'Individual', cat: { kind: 'funded' }, reg: '2025-11-11' },
+  { initials: 'LSP', type: 'Individual', cat: { kind: 'funded' }, reg: '2026-05-25' },
+  { initials: 'IN', type: 'Individual', cat: { kind: 'funded' }, reg: '2026-07-29' },
+  { initials: 'SMR', type: 'Corporate', cat: { kind: 'funded' }, reg: '2026-09-15' },
   // Approved, not yet funded
-  { name: 'Tham Wei Lun', type: 'Individual', cat: { kind: 'approved' }, reg: '2026-06-23' },
-  { name: 'Hidayah Sulaiman', type: 'Individual', cat: { kind: 'approved' }, reg: '2026-08-04' },
-  { name: 'Ganesh Muthu', type: 'Individual', cat: { kind: 'approved' }, reg: '2026-09-21' },
+  { initials: 'TWL', type: 'Individual', cat: { kind: 'approved' }, reg: '2026-06-23' },
+  { initials: 'HS', type: 'Individual', cat: { kind: 'approved' }, reg: '2026-08-04' },
+  { initials: 'GM', type: 'Individual', cat: { kind: 'approved' }, reg: '2026-09-21' },
   // Pending account approval
-  { name: 'Ng Swee Lin', type: 'Individual', cat: { kind: 'pendingApproval' }, reg: '2026-10-06' },
-  { name: 'Faizal Rahman', type: 'Individual', cat: { kind: 'pendingApproval' }, reg: '2026-10-11' },
+  { initials: 'NSL', type: 'Individual', cat: { kind: 'pendingApproval' }, reg: '2026-10-06' },
+  { initials: 'FR', type: 'Individual', cat: { kind: 'pendingApproval' }, reg: '2026-10-11' },
   // KYC incomplete
-  { name: 'Cheah Li Ying', type: 'Individual', cat: { kind: 'kycIncomplete' }, reg: '2026-08-30' },
-  { name: 'Shahrul Nizam Daud', type: 'Individual', cat: { kind: 'kycIncomplete' }, reg: '2026-09-24' },
-  { name: 'Meenakshi Raj', type: 'Individual', cat: { kind: 'kycIncomplete' }, reg: '2026-10-08' },
-  { name: 'Tiara Murni Holdings Sdn Bhd', type: 'Corporate', cat: { kind: 'kycIncomplete' }, reg: '2026-10-15' },
+  { initials: 'CLY', type: 'Individual', cat: { kind: 'kycIncomplete' }, reg: '2026-08-30' },
+  { initials: 'SND', type: 'Individual', cat: { kind: 'kycIncomplete' }, reg: '2026-09-24' },
+  { initials: 'MR', type: 'Individual', cat: { kind: 'kycIncomplete' }, reg: '2026-10-08' },
+  { initials: 'TMH', type: 'Corporate', cat: { kind: 'kycIncomplete' }, reg: '2026-10-15' },
   // CTOS incomplete
-  { name: 'Koh Jun Jie', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-09-02' },
-  { name: 'Aminah Jaafar', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-09-27' },
-  { name: 'Lok Wen Xuan', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-10-13' },
-  { name: 'Rizal Hakimi', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-10-19' },
+  { initials: 'KJJ', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-09-02' },
+  { initials: 'AJ', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-09-27' },
+  { initials: 'LWX', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-10-13' },
+  { initials: 'RH', type: 'Individual', cat: { kind: 'ctosIncomplete' }, reg: '2026-10-19' },
   // Registered only
-  { name: 'Pang Hui Min', type: 'Individual', cat: { kind: 'registered' }, reg: '2026-10-17' },
-  { name: 'Danial Iskandar', type: 'Individual', cat: { kind: 'registered' }, reg: '2026-10-21' },
+  { initials: 'PHM', type: 'Individual', cat: { kind: 'registered' }, reg: '2026-10-17' },
+  { initials: 'DI', type: 'Individual', cat: { kind: 'registered' }, reg: '2026-10-21' },
 ];
 
 const rng = createRng(20261023);
@@ -132,7 +133,7 @@ const drafts: Draft[] = SEEDS.map((s, i) => {
 
   const inv: Investor = {
     id,
-    name: s.name,
+    initials: s.initials,
     type: s.type,
     registeredOn: s.reg,
     onboardingStartedOn: started,

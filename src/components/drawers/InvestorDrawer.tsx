@@ -22,7 +22,7 @@ export function InvestorDrawer({ id, onClose }: { id: string; onClose: () => voi
   const pendingChange = changes.find((c) => c.status === 'Pending review');
 
   return (
-    <Drawer open onClose={onClose} title={investorLabel(inv)} eyebrow={inv.id}
+    <Drawer open onClose={onClose} title={investorLabel(inv)} eyebrow={`${inv.type} investor`}
       headerExtra={<>
         <StatusBadge status={inv.accountStatus} />
         <StatusBadge status={`CTOS ${inv.ctos.toLowerCase()}`} />

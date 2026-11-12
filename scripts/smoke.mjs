@@ -52,10 +52,9 @@ check('Profile updates tab lists investor-type change', await p.evaluate(() => d
 await p.getByRole('button', { name: /Accounts under review/ }).click(); await p.waitForTimeout(500);
 const tableText = await p.locator('#investor-table').innerText();
 check('Exception row filters the investor table', /Accounts under review/.test(tableText) && /\b4 investors\b/.test(tableText), tableText.match(/\d+ investors/)?.[0] ?? '');
-const NAMES = ['Sentosa Family Office', 'Puncak Waris', 'Bayu Timur Capital', 'Ravindran Pillai', 'Amirul Hakim Rosli', 'Chong Wai Keat', 'Tham Wei Lun'];
-check('Investor table shows IDs, not names', NAMES.every((n) => !tableText.includes(n)) && /INV-1007/.test(tableText));
+check('Investor table shows IDs only', /INV-1007/.test(tableText) && !/INV-\d{4} · /.test(tableText));
 const feedText = await p.locator('section', { hasText: 'Recent investor activity' }).first().innerText();
-check('Activity feed shows ID and initials, not names', NAMES.every((n) => !feedText.includes(n)) && /INV-\d{4} · [A-Z]{2,}/.test(feedText));
+check('Activity feed shows ID and initials', /INV-\d{4} · [A-Z]{2,}/.test(feedText));
 await p.locator('#investor-table').getByRole('button', { name: /Remove filter/ }).first().click(); await p.waitForTimeout(200);
 check('Clearing the filter restores the full table', /\b36 investors\b/.test(await p.locator('#investor-table').innerText()));
 await p.getByRole('button', { name: /View all activity/ }).click(); await p.waitForTimeout(300);
