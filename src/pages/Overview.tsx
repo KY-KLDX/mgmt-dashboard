@@ -64,9 +64,9 @@ export function OverviewPage() {
   // Investor snapshot: every registered investor in exactly one group.
   const all = allInvestorMetrics();
   const groups = [
-    { key: 'active', label: 'Active investors', sub: 'Hold a current subscription', n: all.filter((m) => m.currentCount > 0).length, color: 'var(--series-2)', link: { page: 'investors', drawer: { kind: 'investorList', id: 'group:active' } } as LinkTarget },
-    { key: 'idle', label: 'Approved, not invested', sub: 'Verified, no current subscription', n: all.filter((m) => m.currentCount === 0 && m.inv.approvedOn).length, color: 'var(--series-1)', link: { page: 'investors', drawer: { kind: 'investorList', id: 'group:idle' } } as LinkTarget },
-    { key: 'pending', label: 'Not yet verified', sub: 'Onboarding or awaiting approval', n: all.filter((m) => !m.inv.approvedOn).length, color: 'var(--series-muted)', link: { page: 'investors', drawer: { kind: 'investorList', id: 'group:pending' } } as LinkTarget },
+    { key: 'active', label: 'Active investors', sub: 'Hold a current subscription', n: all.filter((m) => m.currentCount > 0).length, color: 'var(--series-2)', link: { page: 'investors', params: { list: 'group:active' } } as LinkTarget },
+    { key: 'idle', label: 'Approved, not invested', sub: 'Verified, no current subscription', n: all.filter((m) => m.currentCount === 0 && m.inv.approvedOn).length, color: 'var(--series-1)', link: { page: 'investors', params: { list: 'group:idle' } } as LinkTarget },
+    { key: 'pending', label: 'Not yet verified', sub: 'Onboarding or awaiting approval', n: all.filter((m) => !m.inv.approvedOn).length, color: 'var(--series-muted)', link: { page: 'investors', params: { list: 'group:pending' } } as LinkTarget },
   ];
   const total = groups.reduce((a, g) => a + g.n, 0);
 

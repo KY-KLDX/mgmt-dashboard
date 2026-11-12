@@ -25,3 +25,15 @@ export function investorMatches(inv: Investor, q: string): boolean {
   const s = q.toLowerCase();
   return inv.id.toLowerCase().includes(s) || inv.name.toLowerCase().includes(s);
 }
+
+const SUFFIXES = /\b(Sdn Bhd|Berhad|Bhd|Enterprise)\b/g;
+
+/** Initials without legal suffixes, e.g. "Sentosa Family Office Sdn Bhd" → "SFO". */
+export function investorInitials(inv: Pick<Investor, 'name'>): string {
+  return inv.name.replace(SUFFIXES, '').trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
+
+/** Privacy-reduced label for feeds: ID plus initials, e.g. "INV-1017 · SFO". */
+export function investorShortLabel(inv: Pick<Investor, 'id' | 'name'>): string {
+  return `${inv.id} · ${investorInitials(inv)}`;
+}

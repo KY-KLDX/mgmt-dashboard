@@ -137,7 +137,7 @@ export function buildAlerts(gov: GovItem[], th: Thresholds): Alert[] {
       title: `${ctos.length + kyc.length} incomplete onboarding cases (${ctos.length} CTOS, ${kyc.length} KYC); ${stale.length} older than ${th.onboardingStaleDays} days`,
       headline: `${ctos.length + kyc.length} onboardings stuck`,
       area: 'Investors', owner: 'Head of Investor Operations', date: null, dateKind: 'since',
-      action: 'Chase stale cases; review eKYC vendor turnaround (INC-2603).', link: { page: 'investors', drawer: { kind: 'investorList', id: 'onboarding' } },
+      action: 'Chase stale cases; review eKYC vendor turnaround (INC-2603).', link: { page: 'investors', params: { list: 'onboarding' } },
     });
   }
 

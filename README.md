@@ -34,7 +34,7 @@ Each page shows at most four KPI cards. Supporting detail sits behind the (i) ic
 
 1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, subscription progress for live and upcoming tranches, an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
 2. **Finance**: tranche pipeline, filterable tranche table, monthly subscriptions, monthly company P&L.
-3. **Investors**: four headline cards, onboarding funnel (CTOS and KYC as separate stages), value bands, a **recent activity** feed (onboarding steps, subscriptions, investor top-ups, back-office manual deposits, withdrawals and profile updates such as investor-type, contact, bank-account and address/ID changes) and **priority exceptions** (failed top-ups, onboarding stalls, KYC aging, accounts under review). Charts, exceptions and "View all" links open investor lists.
+3. **Investors**: four headline cards, onboarding funnel (CTOS and KYC as separate stages), value bands, a **recent activity** feed (onboarding steps, subscriptions, investor top-ups, back-office manual deposits, withdrawals and profile updates such as investor-type, contact, bank-account and address/ID changes) and **priority exceptions** (failed top-ups, onboarding stalls, KYC aging, accounts under review), and the full **investor table** at the bottom (by subscriptions, deposits or wallet, with last activity and review flags). Clicking a band, funnel stage, exception or headline card filters the table.
 4. **Issuers**: 30/60/90-day timeline and obligations table.
 5. **Technology**: incidents, top five risks with a linked risk matrix, resilience measures.
 6. **Governance**: My Actions, CEO & SMT, Board, Policies & applications, All.
@@ -63,7 +63,7 @@ Key rules:
 
 ## Access
 
-There is one view. Everyone who can open the dashboard sees the same pages, including investor names, so **access to the page itself must be limited to staff cleared to see investor identities**. In this prototype the full synthetic dataset ships to the browser; a production build must enforce page access on the server.
+There is one view. For privacy, the investor table shows **IDs only** and the activity feed shows **ID plus initials** (e.g. `INV-1017 · SFO`); searching those lists matches IDs, not names. Investor names still appear in the investor detail panel, global search and some alert text, so **access to the page itself must be limited to staff cleared to see investor identities**. In this prototype the full synthetic dataset ships to the browser; a production build must enforce page access on the server.
 
 ## Header controls
 

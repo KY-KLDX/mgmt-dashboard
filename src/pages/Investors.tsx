@@ -14,6 +14,7 @@ import { activityIn, investorExceptions, type ActivityTab, type InvestorExceptio
 import { compareDate } from '../lib/selectors/common';
 import { FUNNEL_STAGES, activeInvestors, bands, funnel, investorActivity, isCtosIncomplete, isKycIncomplete } from '../lib/selectors/investors';
 import { useApp } from '../state/AppState';
+import { InvestorTable } from './InvestorTable';
 
 const SEV: Record<InvestorException['severity'], string> = {
   Critical: 'bg-crit-soft text-crit',
@@ -25,7 +26,11 @@ const SEV: Record<InvestorException['severity'], string> = {
 const incompleteAt = (at: string) => INVESTORS.filter((i) => isCtosIncomplete(i, at) || isKycIncomplete(i, at)).length;
 
 export function InvestorsPage() {
-  const { period, bands: bandCfg, openDrawer, thresholds } = useApp();
+  const { period, bands: bandCfg, openDrawer, thresholds, params, setParams } = useApp();
+  const showList = (key: string) => {
+    setParams({ list: key });
+    window.setTimeout(() => document.getElementById('investor-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
   const [cohort, setCohort] = useState<'period' | 'all'>('period');
   const [tab, setTab] = useState<ActivityTab>('all');
 
@@ -59,17 +64,17 @@ export function InvestorsPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <HeroKpi icon={Users} tone="blue" label="Active investors" value={int(act.length)} bars={bars.active}
           delta={deltaAbs(act.length, actPrev.length, cmp.label, true)}
-          info="Investors with at least one current subscription." onClick={() => openDrawer({ kind: 'investorList', id: 'group:active' })} />
+          info="Investors with at least one current subscription." onClick={() => showList('group:active')} />
         <HeroKpi icon={Banknote} tone="teal" label="Funds allocated" value={rmShort(allocated)} bars={bars.funds}
           delta={deltaPct(allocated, allocatedPrev, cmp.label)}
           info="Investor funds currently allocated into closed or issued tranches." />
         <HeroKpi icon={UserRoundCog} tone="violet" label="Onboarding incomplete" value={int(incomplete)} bars={bars.incomplete}
           delta={deltaAbs(incomplete, incompleteAt(cmp.at), cmp.label, false)}
-          info="Investors waiting on CTOS or KYC." onClick={() => openDrawer({ kind: 'investorList', id: 'onboarding' })} />
+          info="Investors waiting on CTOS or KYC." onClick={() => showList('onboarding')} />
         <HeroKpi icon={CreditCard} tone="red" label="Failed top-ups" value={int(activity.failed.length)} bars={bars.failed}
           delta={prevActivity ? deltaAbs(activity.failed.length, prevActivity.failed.length, period.compare!.short, false) : undefined}
           info={`${rm(activity.failedAmount)} failed in ${period.label}. Pending top-ups are excluded.`}
-          onClick={() => openDrawer({ kind: 'investorList', id: 'exception:failed' })} />
+          onClick={() => showList('exception:failed')} />
       </div>
 
       <div className="grid grid-cols-1 gap-5 2xl:grid-cols-12">
@@ -78,7 +83,7 @@ export function InvestorsPage() {
             actions={<Tabs label="Funnel cohort" value={cohort} onChange={setCohort} tabs={[{ key: 'period', label: 'Registered in period' }, { key: 'all', label: 'All investors' }]} />}>
             <div className="px-6 pb-5">
               {fun[0].count
-                ? <Funnel stages={fun} selected={null} onSelect={(s) => s && openDrawer({ kind: 'investorList', id: `funnel:${FUNNEL_STAGES.indexOf(s as (typeof FUNNEL_STAGES)[number])}:${cohort}` })} />
+                ? <Funnel stages={fun} selected={null} onSelect={(s) => s && showList(`funnel:${FUNNEL_STAGES.indexOf(s as (typeof FUNNEL_STAGES)[number])}:${cohort}`)} />
                 : <EmptyState title="No registrations in this period" body="Switch to All investors." />}
             </div>
           </Panel>
@@ -86,7 +91,7 @@ export function InvestorsPage() {
         <div className="min-w-0 2xl:col-span-5">
           <Panel icon={Layers} title="Value bands" info={`Current subscriptions by investor value. Change ${cmp.label}. Concentrated: a band holds at least 50% of value with at most 25% of investors.`}>
             <div className="px-6 pb-5">
-              <HBars valueLabel="Current subscribed amount" color="rgb(var(--accent))" onSelect={(k) => openDrawer({ kind: 'investorList', id: `band:${k}` })}
+              <HBars valueLabel="Current subscribed amount" color="rgb(var(--accent))" onSelect={(k) => showList(`band:${k}`)}
                 data={bandRows.map((b) => ({ key: String(b.key), label: b.short, value: b.amount, display: rmShort(b.amount), sub: `${b.count} investors · ${pct(b.share)} of value` }))} />
               <table className="mt-2 w-full text-[12.5px]">
                 <caption className="sr-only">Value band segmentation</caption>
@@ -100,7 +105,7 @@ export function InvestorsPage() {
                 </tr></thead>
                 <tbody>
                   {bandRows.map((b) => (
-                    <tr key={b.key} className="cursor-pointer border-b border-line/60 last:border-0 hover:bg-sunken/60" onClick={() => openDrawer({ kind: 'investorList', id: `band:${b.key}` })}>
+                    <tr key={b.key} className="cursor-pointer border-b border-line/60 last:border-0 hover:bg-sunken/60" onClick={() => showList(`band:${b.key}`)}>
                       <th scope="row" className="whitespace-nowrap py-1.5 pl-2 text-left font-semibold" title={b.label}>{b.short}</th>
                       <td className="num py-1.5 text-right">{b.count}</td>
                       <td className="num whitespace-nowrap py-1.5 text-right">{rm(b.amount)}</td>
@@ -133,11 +138,11 @@ export function InvestorsPage() {
         </div>
         <div className="min-w-0 2xl:col-span-5">
           <Panel icon={AlertTriangle} iconTile="red" title="Priority exceptions" info="Investor issues that need follow-up now, most urgent first."
-            actions={<Button size="sm" variant="ghost" className="font-semibold text-accent" onClick={() => openDrawer({ kind: 'investorList', id: 'exception:all' })}>View all exceptions <ArrowRight size={14} aria-hidden /></Button>}>
+            actions={<Button size="sm" variant="ghost" className="font-semibold text-accent" onClick={() => showList('exception:all')}>View all exceptions <ArrowRight size={14} aria-hidden /></Button>}>
             <ol className="px-4 pb-3">
               {exceptions.map((x, i) => (
                 <li key={x.key}>
-                  <button onClick={() => openDrawer({ kind: 'investorList', id: `exception:${x.key}` })} disabled={!x.count}
+                  <button onClick={() => showList(`exception:${x.key}`)} disabled={!x.count}
                     className={`flex w-full items-center gap-3 rounded-lg px-2 py-3.5 text-left hover:bg-sunken/70 disabled:opacity-50 ${i ? 'border-t border-line' : ''}`}>
                     <span className="num grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sunken text-[14px] font-semibold">{i + 1}</span>
                     <span className="min-w-0 flex-1">
@@ -154,6 +159,8 @@ export function InvestorsPage() {
           </Panel>
         </div>
       </div>
+
+      <InvestorTable listKey={params.list ?? ''} onClearList={() => setParams({})} />
     </div>
   );
 }

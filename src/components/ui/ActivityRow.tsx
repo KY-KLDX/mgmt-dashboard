@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { INVESTORS } from '../../data/investors';
 import { dateShort, rm } from '../../lib/format';
+import { investorShortLabel } from '../../lib/identity';
 import type { ActivityEvent, ActivityTab, ActivityTag } from '../../lib/selectors/activity';
 
 export const ACTIVITY_TABS: { key: ActivityTab; label: string }[] = [
@@ -23,7 +24,7 @@ const TAG: Record<ActivityTag, { pill: string; dot: string }> = {
   Failed: { pill: 'bg-crit-soft text-crit', dot: 'bg-crit' },
 };
 
-const nameOf = new Map(INVESTORS.map((i) => [i.id, i.name]));
+const labelOf = new Map(INVESTORS.map((i) => [i.id, investorShortLabel(i)]));
 
 /** One feed line: dot, investor over what happened, amount, tag, date and time. */
 export function ActivityRow({ e, onOpen }: { e: ActivityEvent; onOpen: () => void }) {
@@ -32,7 +33,7 @@ export function ActivityRow({ e, onOpen }: { e: ActivityEvent; onOpen: () => voi
     <button onClick={onOpen} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken/70">
       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${t.dot}`} aria-hidden />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-semibold">{nameOf.get(e.investorId)}</span>
+        <span className="num block truncate text-[13.5px] font-semibold">{labelOf.get(e.investorId)}</span>
         <span className="block truncate text-[12px] text-ink-3">{e.text}</span>
       </span>
       <span className="num hidden w-28 shrink-0 text-right text-[13.5px] font-semibold sm:block">{e.amount ? rm(e.amount) : ''}</span>
