@@ -43,7 +43,7 @@ function Shell() {
         <MobileNav />
         <main id="main" className="relative min-w-0 flex-1 overflow-y-auto scroll-thin">
           <TopBar />
-          <div className="mx-auto max-w-[1680px] px-6 py-6">{loading ? <PageSkeleton /> : <Page key={page} />}</div>
+          <div className="w-full px-6 py-6">{loading ? <PageSkeleton /> : <Page key={page} />}</div>
         </main>
       </div>
       <DrawerHost />
