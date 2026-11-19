@@ -17,6 +17,7 @@ import { useApp } from '../state/AppState';
 import { monthlyRevenue, periodFinance, trendSeries } from '../lib/selectors/finance';
 import { monthsIn } from '../lib/period';
 import { InvestorTable } from './InvestorTable';
+import { RiskProfileCard } from './RiskProfile';
 
 const SEV: Record<InvestorException['severity'], string> = {
   Critical: 'bg-crit-soft text-crit',
@@ -61,7 +62,7 @@ export function InvestorsPage() {
 
   const fun = useMemo(() => funnel(cohort === 'all' ? null : period), [cohort, period]);
   const bandRows = bands(bandCfg, at, cmp.at);
-  const feed = activityIn(period, tab).slice(0, 5);
+  const feed = activityIn(period, tab).slice(0, 7);
   const exceptions = investorExceptions(thresholds);
 
   return (
@@ -82,8 +83,11 @@ export function InvestorsPage() {
           onClick={() => showList('exception:failed')} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-12">
-        <div className="min-w-0 2xl:col-span-7">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 2xl:grid-cols-12">
+        <div className="min-w-0 xl:col-span-2 2xl:col-span-3">
+          <RiskProfileCard onFilter={showList} onOpen={(id) => openDrawer({ kind: 'investor', id })} />
+        </div>
+        <div className="min-w-0 2xl:col-span-5">
           <Panel icon={Target} title="Onboarding funnel" info="Status as at the reporting date. CTOS and KYC are separate stages. Click a bar to list investors who stopped there."
             actions={<Tabs label="Funnel cohort" value={cohort} onChange={setCohort} tabs={[{ key: 'period', label: 'Registered in period' }, { key: 'all', label: 'All investors' }]} />}>
             <div className="px-6 pb-5">
@@ -93,7 +97,7 @@ export function InvestorsPage() {
             </div>
           </Panel>
         </div>
-        <div className="min-w-0 2xl:col-span-5">
+        <div className="min-w-0 2xl:col-span-4">
           <Panel icon={Layers} title="Value bands" info={`Current subscriptions by investor value. Change ${cmp.label}. Concentrated: a band holds at least 50% of value with at most 25% of investors.`}>
             <div className="px-6 pb-5">
               <HBars valueLabel="Current subscribed amount" color="rgb(var(--accent))" onSelect={(k) => showList(`band:${k}`)}
@@ -105,7 +109,7 @@ export function InvestorsPage() {
                   <th scope="col" className="py-1.5 text-right font-semibold">Investors</th>
                   <th scope="col" className="py-1.5 text-right font-semibold">Amount</th>
                   <th scope="col" className="py-1.5 text-right font-semibold">Share</th>
-                  <th scope="col" className="py-1.5 text-right font-semibold">Change</th>
+                  <th scope="col" className="hidden py-1.5 text-right font-semibold min-[1800px]:table-cell">Change</th>
                   <th scope="col" className="rounded-r-md py-1.5 pl-3 text-left font-semibold">Concentration</th>
                 </tr></thead>
                 <tbody>
@@ -115,7 +119,7 @@ export function InvestorsPage() {
                       <td className="num py-1.5 text-right">{b.count}</td>
                       <td className="num whitespace-nowrap py-1.5 text-right">{rm(b.amount)}</td>
                       <td className="num py-1.5 text-right">{pct(b.share)}</td>
-                      <td className="num whitespace-nowrap py-1.5 text-right text-ink-2">{b.count - b.prevCount >= 0 ? '+' : '−'}{Math.abs(b.count - b.prevCount)} inv</td>
+                      <td className="num hidden whitespace-nowrap py-1.5 text-right text-ink-2 min-[1800px]:table-cell">{b.count - b.prevCount >= 0 ? '+' : '−'}{Math.abs(b.count - b.prevCount)} inv</td>
                       <td className="py-1.5 pl-3">{b.concentrated ? <StatusBadge status="Concentrated" tone="warn" /> : <StatusBadge status="Normal" tone="mute" />}</td>
                     </tr>
                   ))}
@@ -124,7 +128,9 @@ export function InvestorsPage() {
             </div>
           </Panel>
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-12">
         <div className="min-w-0 2xl:col-span-7">
           <Panel icon={Users} iconTile="violet" title="Recent investor activity" info="Everything investors (or the back office) did in the selected period: onboarding steps, subscriptions, top-ups, manual deposits, withdrawals and profile changes."
             actions={<Tabs label="Activity type" value={tab} onChange={setTab} tabs={ACTIVITY_TABS} />}>
@@ -142,8 +148,8 @@ export function InvestorsPage() {
           </Panel>
         </div>
         <div className="min-w-0 2xl:col-span-5">
-          <Panel icon={AlertTriangle} iconTile="red" title="Priority exceptions" info="Investor issues that need follow-up now, most urgent first."
-            actions={<Button size="sm" variant="ghost" className="font-semibold text-accent" onClick={() => showList('exception:all')}>View all exceptions <ArrowRight size={14} aria-hidden /></Button>}>
+          <Panel icon={AlertTriangle} iconTile="red" title="Account alerts" info="Account-behaviour signals and onboarding issues that need follow-up, most urgent first. Rules are illustrative prototype thresholds."
+            actions={<Button size="sm" variant="ghost" className="font-semibold text-accent" onClick={() => showList('exception:all')}>View all alerts <ArrowRight size={14} aria-hidden /></Button>}>
             <ol className="px-4 pb-3">
               {exceptions.map((x, i) => (
                 <li key={x.key}>

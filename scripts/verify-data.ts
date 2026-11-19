@@ -5,6 +5,7 @@
 import { AS_OF } from '../src/data/asOf';
 import { GOVERNANCE } from '../src/data/governance';
 import { PROFILE_CHANGES } from '../src/data/profileChanges';
+import { levelOf, riskProfileFor } from '../src/data/riskProfiles';
 import { allActivity, investorExceptions } from '../src/lib/selectors/activity';
 import { INVESTORS, SUBSCRIPTIONS, TRANSACTIONS } from '../src/data/investors';
 import { ISSUERS } from '../src/data/issuers';
@@ -94,7 +95,14 @@ check('Activity feed covers every profile change', PROFILE_CHANGES.every((c) => 
 const ex = investorExceptions(th);
 check('Failed top-up exception counts last-30-day failures',
   ex.find((e) => e.key === 'failed')!.count === TRANSACTIONS.filter((t) => t.type === 'Top-up' && t.status === 'Failed' && t.date >= '2026-09-23' && t.date <= AS_OF).length);
-check('Review list includes pending bank changes', PROFILE_CHANGES.filter((c) => c.status === 'Pending review').every((c) => ex.find((e) => e.key === 'review')!.ids.includes(c.investorId)));
+check('Bank-change alert lists every pending bank change', PROFILE_CHANGES.filter((c) => c.type === 'Bank account' && c.status === 'Pending review').every((c) => ex.find((e) => e.key === 'bank')!.ids.includes(c.investorId)));
+check('Every account-behaviour alert fires on the synthetic data', ['large', 'roundtrip', 'bank'].every((k) => ex.find((e) => e.key === k)!.count > 0));
+
+// Risk profile (synthetic AML/CDD)
+const risks = INVESTORS.map((i) => riskProfileFor(i.id));
+check('Every investor has exactly one risk level', risks.every((r) => ['Low', 'Medium', 'High'].includes(r.level)) && risks.length === INVESTORS.length);
+check('Risk level follows the factor score', risks.every((r) => r.level === levelOf(r.factors)));
+check('Only High risk needs review, and every High is pending or cleared', risks.every((r) => (r.level === 'High') === (r.review !== 'Not required')));
 
 // Privacy: no investor names are held in the dashboard data
 check('Investors carry ID and initials only (no name field)', INVESTORS.every((i) => !('name' in i) && /^[A-Z]{1,6}$/.test(i.initials)));

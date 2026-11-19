@@ -85,12 +85,12 @@ export function activityIn(r: Range, tab: ActivityTab = 'all'): ActivityEvent[] 
 // ---- Priority exceptions ------------------------------------------------------------------
 
 export interface InvestorException {
-  key: 'failed' | 'stalls' | 'kyc' | 'review';
+  key: 'failed' | 'large' | 'roundtrip' | 'bank' | 'stalls' | 'kyc' | 'review';
   title: string;
   rule: string;
   severity: 'Critical' | 'High' | 'Medium' | 'Review';
   ids: string[];
-  /** Number of items (transactions for failed top-ups, investors otherwise). */
+  /** Number of items (transactions for money signals, investors otherwise). */
   count: number;
 }
 
@@ -99,23 +99,54 @@ const lastStep = (id: string) => {
   return [i.registeredOn, i.onboardingStartedOn, i.ctosCompletedOn, i.kycCompletedOn].filter((d): d is string => !!d).sort().pop()!;
 };
 
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length ? s[Math.floor(s.length / 2)] : 0;
+};
+
+/** Account alerts: account-behaviour signals and onboarding issues that need follow-up, most urgent first. */
 export function investorExceptions(th: Thresholds): InvestorException[] {
   const since = addDays(AS_OF, -30);
-  const failed = TRANSACTIONS.filter((t) => t.type === 'Top-up' && t.status === 'Failed' && t.date >= since && t.date <= AS_OF);
+  const inWindow = (d: string) => d >= since && d <= AS_OF;
+  const topups = TRANSACTIONS.filter((t) => t.type === 'Top-up');
+  const failed = topups.filter((t) => t.status === 'Failed' && inWindow(t.date));
+
+  // Large deposit vs profile: at least RM 200k and 3x the investor's usual (median) earlier top-up.
+  const ok = topups.filter((t) => t.status === 'Successful');
+  const large = ok.filter((t) => {
+    if (!inWindow(t.date) || t.amount < 200_000) return false;
+    const earlier = ok.filter((x) => x.investorId === t.investorId && x.date < t.date).map((x) => x.amount);
+    return earlier.length > 0 && t.amount >= 3 * median(earlier);
+  });
+
+  // Deposit then quick withdrawal: money in, then at least 90% back out within 7 days, with no subscription between.
+  const roundtrip = ok.filter((t) => {
+    if (!inWindow(t.date)) return false;
+    const out = TRANSACTIONS.find((w) => w.investorId === t.investorId && w.type === 'Withdrawal' && w.status === 'Completed'
+      && w.date >= t.date && daysBetween(t.date, w.date) <= 7 && w.amount >= 0.9 * t.amount);
+    if (!out) return false;
+    return !SUBSCRIPTIONS.some((s) => s.investorId === t.investorId && s.requestedOn >= t.date && s.requestedOn <= out.date);
+  });
+
+  const bank = PROFILE_CHANGES.filter((c) => c.type === 'Bank account' && c.status === 'Pending review');
   const stalls = INVESTORS.filter((i) => isCtosIncomplete(i) && daysBetween(lastStep(i.id), AS_OF) >= 7);
   const kyc = INVESTORS.filter((i) => (isKycIncomplete(i) || (i.kycCompletedOn && !i.approvedOn)) && daysBetween(lastStep(i.id), AS_OF) >= 7);
   const review = new Set([
     ...INVESTORS.filter((i) => i.accountStatus === 'Under review').map((i) => i.id),
-    ...PROFILE_CHANGES.filter((c) => c.status === 'Pending review').map((c) => c.investorId),
+    ...PROFILE_CHANGES.filter((c) => c.type !== 'Bank account' && c.status === 'Pending review').map((c) => c.investorId),
   ]);
+  const uniq = (xs: { investorId: string }[]) => [...new Set(xs.map((x) => x.investorId))];
+
   return [
     {
-      key: 'failed', title: 'Failed top-ups', rule: 'Top-ups that failed in the last 30 days. Retry or contact the investor.',
-      severity: failed.some((t) => t.amount >= th.highValueTopUp) ? 'Critical' : 'High',
-      ids: [...new Set(failed.map((t) => t.investorId))], count: failed.length,
+      key: 'failed', title: 'Failed top-ups', rule: 'Failed in the last 30 days. Retry or contact the investor.',
+      severity: failed.some((t) => t.amount >= th.highValueTopUp) ? 'Critical' : 'High', ids: uniq(failed), count: failed.length,
     },
-    { key: 'stalls', title: 'Onboarding stalls', rule: 'Started onboarding but stuck at CTOS for 7+ days.', severity: 'High', ids: stalls.map((i) => i.id), count: stalls.length },
-    { key: 'kyc', title: 'KYC aging', rule: 'KYC or approval pending for 7+ days.', severity: 'Medium', ids: kyc.map((i) => i.id), count: kyc.length },
-    { key: 'review', title: 'Accounts under review', rule: 'Flagged funding or a recent bank-account change to verify.', severity: 'Review', ids: [...review], count: review.size },
+    { key: 'large', title: 'Large deposit vs profile', rule: 'RM 200k+ and 3x the usual top-up, last 30 days.', severity: 'High', ids: uniq(large), count: large.length },
+    { key: 'roundtrip', title: 'Deposit then quick withdrawal', rule: 'Withdrawn within 7 days without investing.', severity: 'High', ids: uniq(roundtrip), count: roundtrip.length },
+    { key: 'bank', title: 'Recent bank-account change', rule: 'Verify before the next withdrawal.', severity: 'High', ids: uniq(bank), count: bank.length },
+    { key: 'stalls', title: 'Onboarding stalls', rule: 'Stuck at CTOS for 7+ days.', severity: 'Medium', ids: stalls.map((i) => i.id), count: stalls.length },
+    { key: 'kyc', title: 'KYC aging', rule: 'KYC or approval pending 7+ days.', severity: 'Medium', ids: kyc.map((i) => i.id), count: kyc.length },
+    { key: 'review', title: 'Accounts under review', rule: 'Funding check or ID re-check in progress.', severity: 'Review', ids: [...review], count: review.size },
   ];
 }

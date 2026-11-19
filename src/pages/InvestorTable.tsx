@@ -5,6 +5,7 @@ import { DataTable, type Column } from '../components/ui/DataTable';
 import { Chips, SearchInput, Select, Tabs } from '../components/ui/Primitives';
 import { Panel } from '../components/ui/Showcase';
 import { PROFILE_CHANGES } from '../data/profileChanges';
+import { riskProfileFor } from '../data/riskProfiles';
 import { date, rm } from '../lib/format';
 import { resolveInvestorList } from '../lib/selectors/investorLists';
 import { allInvestorMetrics, bandIndex, bands, isCtosIncomplete, isKycIncomplete, onboardingAge, type InvestorMetrics } from '../lib/selectors/investors';
@@ -27,6 +28,7 @@ export function InvestorTable({ listKey, onClearList }: { listKey: string; onCle
   const [band, setBand] = useState('');
   const [ctos, setCtos] = useState('');
   const [kyc, setKyc] = useState('');
+  const [risk, setRisk] = useState('');
   const bandRows = bands(bandCfg);
   const list = listKey ? resolveInvestorList(listKey, { thresholds, bands: bandCfg, period }) : null;
 
@@ -38,6 +40,7 @@ export function InvestorTable({ listKey, onClearList }: { listKey: string; onCle
   if (band) rows = rows.filter((m) => m.currentCount > 0 && bandIndex(m.current, bandCfg) === Number(band));
   if (ctos) rows = rows.filter((m) => m.inv.ctos === ctos);
   if (kyc) rows = rows.filter((m) => m.inv.kyc === kyc);
+  if (risk) rows = rows.filter((m) => riskProfileFor(m.inv.id).level === risk);
   if (q) rows = rows.filter((m) => m.inv.id.toLowerCase().includes(q.toLowerCase()));
 
   const chips = [
@@ -45,6 +48,7 @@ export function InvestorTable({ listKey, onClearList }: { listKey: string; onCle
     band && { key: 'band', label: `Band ${bandRows[Number(band)]?.short}`, onRemove: () => setBand('') },
     ctos && { key: 'ctos', label: `CTOS ${ctos.toLowerCase()}`, onRemove: () => setCtos('') },
     kyc && { key: 'kyc', label: `KYC ${kyc.toLowerCase()}`, onRemove: () => setKyc('') },
+    risk && { key: 'risk', label: `${risk} risk`, onRemove: () => setRisk('') },
     q && { key: 'q', label: `“${q}”`, onRemove: () => setQ('') },
   ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
 
@@ -61,6 +65,11 @@ export function InvestorTable({ listKey, onClearList }: { listKey: string; onCle
     { key: 'ctos', header: 'CTOS / KYC', render: (m) => (
       <span className="flex flex-col items-start gap-1"><StatusBadge status={`CTOS ${m.inv.ctos.toLowerCase()}`} /><StatusBadge status={`KYC ${m.inv.kyc.toLowerCase()}`} /></span>
     ), sort: (m) => `${m.inv.ctos}${m.inv.kyc}` },
+    { key: 'risk', header: 'Risk', render: (m) => {
+      const r = riskProfileFor(m.inv.id);
+      const tone = r.level === 'High' ? 'crit' : r.level === 'Medium' ? 'warn' : 'good';
+      return <span title={r.factors.join(' · ') || 'No risk factors'}><StatusBadge status={r.review === 'Pending review' ? 'High · review' : r.level} tone={tone} /></span>;
+    }, sort: (m) => ({ High: 0, Medium: 1, Low: 2 })[riskProfileFor(m.inv.id).level] },
     { key: 'acct', header: 'Account', render: (m) => <StatusBadge status={m.inv.accountStatus} />, sort: (m) => m.inv.accountStatus },
     { key: 'review', header: 'Review', render: (m) => {
       const c = pendingReview.get(m.inv.id);
@@ -82,10 +91,11 @@ export function InvestorTable({ listKey, onClearList }: { listKey: string; onCle
           <SearchInput id="inv-q" value={q} onChange={setQ} placeholder="Investor ID, e.g. INV-1017" />
           <Select id="inv-band" label="Value band" value={band} onChange={setBand} options={[{ value: '', label: 'All bands' }, ...bandRows.map((b) => ({ value: String(b.key), label: b.short }))]} />
           <Select id="inv-ctos" label="CTOS status" value={ctos} onChange={setCtos} options={[{ value: '', label: 'Any' }, { value: 'Completed', label: 'Completed' }, { value: 'Incomplete', label: 'Incomplete' }, { value: 'Not started', label: 'Not started' }]} />
+          <Select id="inv-risk" label="Risk" value={risk} onChange={setRisk} options={[{ value: '', label: 'Any' }, { value: 'High', label: 'High' }, { value: 'Medium', label: 'Medium' }, { value: 'Low', label: 'Low' }]} />
           <Select id="inv-kyc" label="KYC status" value={kyc} onChange={setKyc} options={[{ value: '', label: 'Any' }, { value: 'Completed', label: 'Completed' }, { value: 'Incomplete', label: 'Incomplete' }, { value: 'Not started', label: 'Not started' }]} />
           <span className="ml-auto text-[12px] text-ink-3">{rows.length} investors</span>
         </div>
-        {chips.length > 0 && <div className="border-b border-line px-6 py-2.5"><Chips chips={chips} onClear={() => { onClearList(); setBand(''); setCtos(''); setKyc(''); setQ(''); }} /></div>}
+        {chips.length > 0 && <div className="border-b border-line px-6 py-2.5"><Chips chips={chips} onClear={() => { onClearList(); setBand(''); setCtos(''); setKyc(''); setRisk(''); setQ(''); }} /></div>}
         <DataTable key={`${tab}-${listKey}`} caption="All investors" rows={rows} rowKey={(m) => m.inv.id} onRowClick={(m) => openDrawer({ kind: 'investor', id: m.inv.id })}
           maxHeight="640px" initialSort={{ key: SORT[tab], dir: 'desc' }} columns={columns} />
       </Panel>

@@ -1,4 +1,5 @@
 import { INVESTORS } from '../../data/investors';
+import { riskProfileFor } from '../../data/riskProfiles';
 import type { Bands, Thresholds } from '../../data/thresholds';
 import type { Range } from '../period';
 import { investorExceptions } from './activity';
@@ -6,7 +7,8 @@ import { FUNNEL_STAGES, allInvestorMetrics, bands, funnel, isCtosIncomplete, isK
 
 /**
  * Named investor lists used by chart clicks, exceptions and links.
- * Keys: group:<active|idle|pending>, onboarding, band:<n>, funnel:<stage index>:<period|all>, exception:<key|all>.
+ * Keys: group:<active|idle|pending>, onboarding, band:<n>, funnel:<stage index>:<period|all>,
+ * risk:<low|medium|high|review>, exception:<key|all>.
  */
 export function resolveInvestorList(key: string, ctx: { thresholds: Thresholds; bands: Bands; period: Range }): { title: string; ids: string[] } {
   if (key.startsWith('group:')) {
@@ -30,6 +32,14 @@ export function resolveInvestorList(key: string, ctx: { thresholds: Thresholds; 
     if (!f[n]) return { title: 'Funnel stage', ids: [] };
     const next = new Set(f[n + 1]?.ids ?? []);
     return { title: `Stopped at ${FUNNEL_STAGES[n]}`, ids: f[n].ids.filter((x) => n === f.length - 1 || !next.has(x)) };
+  }
+  if (key.startsWith('risk:')) {
+    const k = key.slice(5);
+    const ids = INVESTORS.filter((i) => {
+      const r = riskProfileFor(i.id);
+      return k === 'review' ? r.review === 'Pending review' : r.level.toLowerCase() === k;
+    }).map((i) => i.id);
+    return { title: k === 'review' ? 'High risk · awaiting review' : `${k[0].toUpperCase()}${k.slice(1)} risk`, ids };
   }
   if (key.startsWith('exception:')) {
     const all = investorExceptions(ctx.thresholds);

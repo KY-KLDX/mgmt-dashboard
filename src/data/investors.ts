@@ -313,6 +313,17 @@ for (const [investorId, amount, date] of [
   addTxn({ investorId, type: 'Top-up', amount, date, status: 'Pending', note: 'Awaiting bank confirmation' });
 }
 
+// Account-behaviour signals for the Account alerts card (synthetic):
+// money in and straight back out without investing, and one deposit far above an investor's usual size.
+for (const [investorId, inAmt, inDate, outAmt, outDate] of [
+  ['INV-1133', 180_000, '2026-10-06', 175_000, '2026-10-09'],
+  ['INV-1125', 95_000, '2026-09-29', 95_000, '2026-10-02'],
+] as const) {
+  addTxn({ investorId, type: 'Top-up', amount: inAmt, date: inDate, status: 'Successful', note: 'FPX online banking' });
+  addTxn({ investorId, type: 'Withdrawal', amount: outAmt, date: outDate, status: 'Completed', note: 'To registered bank account' });
+}
+addTxn({ investorId: 'INV-1059', type: 'Top-up', amount: 560_000, date: '2026-10-15', status: 'Successful', note: 'DuitNow transfer' });
+
 // Money-in channel: bank transfers are credited manually by the back office; FPX and DuitNow are automated.
 for (const t of txns) {
   if (t.type !== 'Top-up') continue;

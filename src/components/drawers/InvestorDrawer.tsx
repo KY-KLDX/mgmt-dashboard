@@ -1,6 +1,7 @@
 import { AS_OF } from '../../data/asOf';
 import { INVESTORS } from '../../data/investors';
 import { PROFILE_CHANGES } from '../../data/profileChanges';
+import { riskProfileFor } from '../../data/riskProfiles';
 import { TRANCHES } from '../../data/tranches';
 import { date, rm } from '../../lib/format';
 import { investorLabel } from '../../lib/identity';
@@ -20,11 +21,13 @@ export function InvestorDrawer({ id, onClose }: { id: string; onClose: () => voi
   const current = m.subs.filter((s) => isCurrentAt(s, AS_OF));
   const changes = PROFILE_CHANGES.filter((c) => c.investorId === inv.id).sort((a, b) => b.date.localeCompare(a.date));
   const pendingChange = changes.find((c) => c.status === 'Pending review');
+  const risk = riskProfileFor(inv.id);
 
   return (
     <Drawer open onClose={onClose} title={investorLabel(inv)} eyebrow={`${inv.type} investor`}
       headerExtra={<>
         <StatusBadge status={inv.accountStatus} />
+        <StatusBadge status={`${risk.level} risk${risk.review === 'Pending review' ? ' · review' : ''}`} tone={risk.level === 'High' ? 'crit' : risk.level === 'Medium' ? 'warn' : 'good'} />
         <StatusBadge status={`CTOS ${inv.ctos.toLowerCase()}`} />
         <StatusBadge status={`KYC ${inv.kyc.toLowerCase()}`} />
       </>}>

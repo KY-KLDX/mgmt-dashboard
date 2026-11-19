@@ -6,16 +6,16 @@ export function Funnel({ stages, selected, onSelect }: { stages: FunnelStage[]; 
   const max = Math.max(1, stages[0].count);
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-[12.5px]">
+      <table className="w-full min-w-[520px] text-[12.5px]">
         <caption className="sr-only">Investor lifecycle funnel</caption>
         <thead>
           <tr className="text-[11.5px] text-ink-3">
             <th scope="col" className="w-44 pb-2 text-left font-medium">Stage</th>
             <th scope="col" className="pb-2 text-left font-medium">Investors</th>
             <th scope="col" className="w-24 pb-2 text-right font-medium">From previous</th>
-            <th scope="col" className="w-24 pb-2 text-right font-medium">From registered</th>
+            <th scope="col" className="hidden w-24 pb-2 text-right font-medium min-[1800px]:table-cell">From registered</th>
             <th scope="col" className="w-20 pb-2 text-right font-medium">Drop-off</th>
-            <th scope="col" className="w-24 pb-2 text-right font-medium">Median days</th>
+            <th scope="col" className="hidden w-24 pb-2 text-right font-medium min-[1800px]:table-cell">Median days</th>
           </tr>
         </thead>
         <tbody>
@@ -39,9 +39,9 @@ export function Funnel({ stages, selected, onSelect }: { stages: FunnelStage[]; 
                   </button>
                 </td>
                 <td className={`num py-1.5 text-right ${weak ? 'font-semibold text-warn' : 'text-ink-2'}`}>{s.fromPrev === null || prevCount === 0 ? '—' : pct(s.fromPrev, 0)}</td>
-                <td className="num py-1.5 text-right text-ink-2">{pct(s.fromStart, 0)}</td>
+                <td className="num hidden py-1.5 text-right text-ink-2 min-[1800px]:table-cell">{pct(s.fromStart, 0)}</td>
                 <td className="num py-1.5 text-right text-ink-2">{k === stages.length - 1 ? '—' : s.dropOff}</td>
-                <td className="num py-1.5 text-right text-ink-2">{s.medianDays === null ? '—' : s.medianDays.toFixed(1)}</td>
+                <td className="num hidden py-1.5 text-right text-ink-2 min-[1800px]:table-cell">{s.medianDays === null ? '—' : s.medianDays.toFixed(1)}</td>
               </tr>
             );
           })}
