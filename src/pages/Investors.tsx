@@ -14,6 +14,8 @@ import { activityIn, investorExceptions, type ActivityTab, type InvestorExceptio
 import { compareDate } from '../lib/selectors/common';
 import { FUNNEL_STAGES, activeInvestors, bands, funnel, investorActivity, isCtosIncomplete, isKycIncomplete } from '../lib/selectors/investors';
 import { useApp } from '../state/AppState';
+import { monthlyRevenue, periodFinance, trendSeries } from '../lib/selectors/finance';
+import { monthsIn } from '../lib/period';
 import { InvestorTable } from './InvestorTable';
 
 const SEV: Record<InvestorException['severity'], string> = {
@@ -38,8 +40,11 @@ export function InvestorsPage() {
   const cmp = compareDate(period);
   const act = activeInvestors(at);
   const actPrev = activeInvestors(cmp.at);
-  const allocated = act.reduce((a, m) => a + m.current, 0);
-  const allocatedPrev = actPrev.reduce((a, m) => a + m.current, 0);
+  // Same "Total subscriptions" figure as the Executive Overview.
+  const fin = periodFinance(period, thresholds);
+  const cmpFin = period.compare ? periodFinance(period.compare, thresholds) : null;
+  const budgetSubs = trendSeries(thresholds).filter((t) => monthsIn(period).includes(t.month)).reduce((a, t) => a + (t.budgetSubs ?? 0), 0);
+  const subsLabel = period.compare ? `vs ${period.compare.label.replace(/^same point in /, '').replace(/^(\w{3})\w* (\d{4})$/, '$1 $2')}` : 'vs budget';
   const incomplete = incompleteAt(at);
   const activity = investorActivity(period);
   const prevActivity = period.compare ? investorActivity(period.compare) : null;
@@ -49,7 +54,7 @@ export function InvestorsPage() {
   const ends = months.map((m) => (monthEnd(m) < AS_OF ? monthEnd(m) : AS_OF));
   const bars = useMemo(() => ({
     active: ends.map((d) => activeInvestors(d).length),
-    funds: ends.map((d) => activeInvestors(d).reduce((a, m) => a + m.current, 0)),
+    subs: months.map((m) => monthlyRevenue(m, thresholds).subs),
     incomplete: ends.map(incompleteAt),
     failed: months.map((m) => TRANSACTIONS.filter((t) => t.type === 'Top-up' && t.status === 'Failed' && monthKey(t.date) === m).length),
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -65,9 +70,9 @@ export function InvestorsPage() {
         <HeroKpi icon={Users} tone="blue" label="Active investors" value={int(act.length)} bars={bars.active}
           delta={deltaAbs(act.length, actPrev.length, cmp.label, true)}
           info="Investors with at least one current subscription." onClick={() => showList('group:active')} />
-        <HeroKpi icon={Banknote} tone="teal" label="Funds allocated" value={rmShort(allocated)} bars={bars.funds}
-          delta={deltaPct(allocated, allocatedPrev, cmp.label)}
-          info="Investor funds currently allocated into closed or issued tranches." />
+        <HeroKpi icon={Banknote} tone="teal" label="Total subscriptions" value={rmShort(fin.successful)} bars={bars.subs}
+          delta={cmpFin ? deltaPct(fin.successful, cmpFin.successful, subsLabel) : deltaPct(fin.successful, budgetSubs, 'vs budget')}
+          info={`Successful subscriptions in tranches closed ${period.label} (same figure as the Executive Overview). Budget ${rmShort(budgetSubs)}.`} />
         <HeroKpi icon={UserRoundCog} tone="violet" label="Onboarding incomplete" value={int(incomplete)} bars={bars.incomplete}
           delta={deltaAbs(incomplete, incompleteAt(cmp.at), cmp.label, false)}
           info="Investors waiting on CTOS or KYC." onClick={() => showList('onboarding')} />
