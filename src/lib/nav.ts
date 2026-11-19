@@ -15,7 +15,7 @@ export interface LinkTarget {
 export const PAGES: { key: PageKey; label: string; title: string }[] = [
   { key: 'overview', label: 'Executive Overview', title: 'Executive Overview' },
   { key: 'finance', label: 'Finance', title: 'Finance' },
-  { key: 'investors', label: 'Investors', title: 'Investors' },
+  { key: 'investors', label: 'Investor Operations', title: 'Investor Operations' },
   { key: 'issuers', label: 'Issuers', title: 'Issuers' },
   { key: 'technology', label: 'Technology', title: 'Technology' },
   { key: 'governance', label: 'Governance', title: 'Governance' },

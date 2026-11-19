@@ -10,6 +10,7 @@ export const TILE = {
   teal: { tile: 'bg-good-soft text-good', line: 'var(--series-2)' },
   violet: { tile: 'bg-violet-soft text-violet', line: 'rgb(var(--violet))' },
   red: { tile: 'bg-crit-soft text-crit', line: 'rgb(var(--crit))' },
+  amber: { tile: 'bg-warn-soft text-warn', line: 'rgb(var(--warn))' },
 } as const;
 export type TileTone = keyof typeof TILE;
 
@@ -29,8 +30,10 @@ export function MiniBars({ values, color, width = 72, height = 40 }: { values: n
 }
 
 /** Headline KPI card: tinted icon tile, label, big value, one comparison and a mini trend. */
-export function HeroKpi({ icon: Icon, tone, label, value, delta, spark, bars, onClick, info }: {
+export function HeroKpi({ icon: Icon, tone, label, value, delta, spark, bars, onClick, info, compact }: {
   icon: LucideIcon; tone: TileTone; label: string; value: string; delta?: KpiDelta; spark?: number[]; bars?: number[]; onClick?: () => void; info: string;
+  /** Four-up rows: smaller tile, and the trend line shows only when the card is wide enough not to collide with the text. */
+  compact?: boolean;
 }) {
   const D = delta?.direction === 'up' ? ArrowUpRight : delta?.direction === 'down' ? ArrowDownRight : ArrowRight;
   const dcls = delta?.good === true ? 'text-good' : delta?.good === false ? 'text-crit' : 'text-ink-3';
@@ -38,14 +41,14 @@ export function HeroKpi({ icon: Icon, tone, label, value, delta, spark, bars, on
   return (
     <Tag onClick={onClick} title={info} aria-label={`${label}: ${value}. ${info}`}
       className={`card flex min-w-0 items-center gap-4 px-5 py-5 text-left transition-shadow ${onClick ? 'hover:shadow-lift' : ''}`}>
-      <span className={`grid h-14 w-14 shrink-0 place-items-center self-start rounded-2xl ${TILE[tone].tile}`}><Icon size={26} aria-hidden /></span>
+      <span className={`grid shrink-0 place-items-center self-start rounded-2xl ${compact ? 'h-12 w-12' : 'h-14 w-14'} ${TILE[tone].tile}`}><Icon size={compact ? 23 : 26} aria-hidden /></span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-ink">{label}</span>
+        <span className="block whitespace-nowrap text-[15px] font-semibold text-ink">{label}</span>
         <span className="num mt-1 block whitespace-nowrap font-display text-[30px] font-semibold leading-tight tracking-tight"><MoneyValue v={value} /></span>
         {delta && <span className={`mt-1 flex items-center gap-1 whitespace-nowrap text-[13.5px] font-semibold ${dcls}`}><D size={16} aria-hidden />{delta.text}</span>}
       </span>
-      {spark && <span className="hidden self-end sm:block"><Sparkline values={spark} width={84} height={48} color={TILE[tone].line} /></span>}
-      {bars && <span className="hidden self-end sm:block"><MiniBars values={bars} color={TILE[tone].line} /></span>}
+      {spark && <span className={`hidden self-end ${compact ? 'min-[1640px]:block' : 'sm:block'}`}><Sparkline values={spark} width={84} height={48} color={TILE[tone].line} /></span>}
+      {bars && <span className={`hidden self-end ${compact ? 'min-[1640px]:block' : 'sm:block'}`}><MiniBars values={bars} color={TILE[tone].line} /></span>}
     </Tag>
   );
 }

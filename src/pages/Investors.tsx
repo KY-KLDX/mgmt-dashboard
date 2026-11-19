@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight, Banknote, ChevronRight, CreditCard, Layers, Target, UserRoundCog, Users } from 'lucide-react';
+import { AlertTriangle, ArrowRight, ChevronRight, CreditCard, Layers, Target, UserRoundCog, Users, UsersRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { HBars } from '../components/charts/Charts';
 import { Funnel } from '../components/charts/Funnel';
@@ -18,6 +18,7 @@ import { monthlyRevenue, periodFinance, trendSeries } from '../lib/selectors/fin
 import { monthsIn } from '../lib/period';
 import { InvestorTable } from './InvestorTable';
 import { RiskProfileCard } from './RiskProfile';
+import { AllocationTracker, SubscriptionProgressSection } from './OperationsSections';
 
 const SEV: Record<InvestorException['severity'], string> = {
   Critical: 'bg-crit-soft text-crit',
@@ -51,8 +52,9 @@ export function InvestorsPage() {
   const prevActivity = period.compare ? investorActivity(period.compare) : null;
 
   // Eight month-end points for the mini bars.
-  const months = TREND_MONTHS.slice(-8);
+  const months = TREND_MONTHS.slice(-7);
   const ends = months.map((m) => (monthEnd(m) < AS_OF ? monthEnd(m) : AS_OF));
+  // Seven month-end points, the same window as the Executive Overview sparklines.
   const bars = useMemo(() => ({
     active: ends.map((d) => activeInvestors(d).length),
     subs: months.map((m) => monthlyRevenue(m, thresholds).subs),
@@ -68,16 +70,16 @@ export function InvestorsPage() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <HeroKpi icon={Users} tone="blue" label="Active investors" value={int(act.length)} bars={bars.active}
-          delta={deltaAbs(act.length, actPrev.length, cmp.label, true)}
-          info="Investors with at least one current subscription." onClick={() => showList('group:active')} />
-        <HeroKpi icon={Banknote} tone="teal" label="Total subscriptions" value={rmShort(fin.successful)} bars={bars.subs}
+        <HeroKpi compact icon={Users} tone="blue" label="Total subscriptions" value={rmShort(fin.successful)} spark={bars.subs}
           delta={cmpFin ? deltaPct(fin.successful, cmpFin.successful, subsLabel) : deltaPct(fin.successful, budgetSubs, 'vs budget')}
-          info={`Successful subscriptions in tranches closed ${period.label} (same figure as the Executive Overview). Budget ${rmShort(budgetSubs)}.`} />
-        <HeroKpi icon={UserRoundCog} tone="violet" label="Onboarding incomplete" value={int(incomplete)} bars={bars.incomplete}
+          info={`Successful subscriptions in tranches closed ${period.label}. Same card as the Executive Overview. Budget ${rmShort(budgetSubs)}.`} />
+        <HeroKpi compact icon={UsersRound} tone="violet" label="Active investors" value={int(act.length)} spark={bars.active}
+          delta={deltaAbs(act.length, actPrev.length, period.compare ? subsLabel : cmp.label, true)}
+          info="Investors with at least one current subscription. Same card as the Executive Overview." onClick={() => showList('group:active')} />
+        <HeroKpi compact icon={UserRoundCog} tone="amber" label="Onboarding incomplete" value={int(incomplete)} spark={bars.incomplete}
           delta={deltaAbs(incomplete, incompleteAt(cmp.at), cmp.label, false)}
           info="Investors waiting on CTOS or KYC." onClick={() => showList('onboarding')} />
-        <HeroKpi icon={CreditCard} tone="red" label="Failed top-ups" value={int(activity.failed.length)} bars={bars.failed}
+        <HeroKpi compact icon={CreditCard} tone="red" label="Failed top-ups" value={int(activity.failed.length)} spark={bars.failed}
           delta={prevActivity ? deltaAbs(activity.failed.length, prevActivity.failed.length, period.compare!.short, false) : undefined}
           info={`${rm(activity.failedAmount)} failed in ${period.label}. Pending top-ups are excluded.`}
           onClick={() => showList('exception:failed')} />
@@ -171,6 +173,8 @@ export function InvestorsPage() {
         </div>
       </div>
 
+      <SubscriptionProgressSection focus={params.tranche ?? ''} />
+      <AllocationTracker />
       <InvestorTable listKey={params.list ?? ''} onClearList={() => setParams({})} />
     </div>
   );

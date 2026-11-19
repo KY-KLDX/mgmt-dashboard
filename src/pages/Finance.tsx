@@ -1,25 +1,25 @@
 import { ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PnlTrend, SubscriptionTrend } from '../components/charts/Charts';
-import { StatusBadge, toneFor } from '../components/ui/Badge';
+import { StatusBadge } from '../components/ui/Badge';
 import { DataTable } from '../components/ui/DataTable';
 import { KpiCard, deltaAbs, deltaPct } from '../components/ui/KpiCard';
-import { Card, Chips, InfoTip, Progress, SearchInput, Select, Tabs } from '../components/ui/Primitives';
+import { Card, Chips, InfoTip, SearchInput, Select, Tabs } from '../components/ui/Primitives';
 import { ISSUERS } from '../data/issuers';
 import { LATEST_CLOSED_PNL_MONTH } from '../data/pnl';
 import { TRANCHE_STAGES, type TrancheStage } from '../data/types';
-import { date, monthLabel, monthLong, pct, rm, rmShort, signed } from '../lib/format';
+import { date, dateShort, monthLabel, monthLong, pct, rm, rmShort, signed } from '../lib/format';
 import { allTrancheStats, closedPnl, issuerShort, latestPnlFor, periodFinance, pnlView, trendSeries, type PnlView, type TrancheStats } from '../lib/selectors/finance';
 import { useApp, useParam } from '../state/AppState';
+import { allocationTracker, nextPaymentFor } from '../lib/selectors/operations';
+import { PaymentsSection } from './PaymentsSection';
 import { shiftMonthKey, monthKey } from '../data/asOf';
 
-const RISKS = ['Critical', 'Attention', 'On track', 'Completed', 'Not started'];
 
 export function FinancePage() {
   const { period, thresholds, openDrawer, setParams } = useApp();
   const [stage, setStage] = useParam('stage');
   const [issuer, setIssuer] = useParam('issuer');
-  const [risk, setRisk] = useParam('risk');
   const [month, setMonth] = useParam('month');
   const [view, setView] = useParam('view', 'current');
   const [from, setFrom] = useParam('from');
@@ -43,7 +43,6 @@ export function FinancePage() {
     if (view === 'historical' && t.stage !== 'Matured') return false;
     if (stage && t.stage !== stage) return false;
     if (issuer && t.issuerId !== issuer) return false;
-    if (risk && s.risk !== risk) return false;
     if (month && monthKey(t.closeDate) !== month) return false;
     if (from && t.closeDate < from) return false;
     if (to && t.closeDate > to) return false;
@@ -54,7 +53,6 @@ export function FinancePage() {
   const chips = [
     stage && { key: 'stage', label: `Stage: ${stage}`, onRemove: () => setStage('') },
     issuer && { key: 'issuer', label: `Issuer: ${issuerShort(issuer)}`, onRemove: () => setIssuer('') },
-    risk && { key: 'risk', label: `Risk: ${risk}`, onRemove: () => setRisk('') },
     month && { key: 'month', label: `Closed in ${monthLong(month)}`, onRemove: () => setMonth('') },
     from && { key: 'from', label: `Closes from ${date(from)}`, onRemove: () => setFrom('') },
     to && { key: 'to', label: `Closes to ${date(to)}`, onRemove: () => setTo('') },
@@ -107,7 +105,6 @@ export function FinancePage() {
           <SearchInput id="tr-q" value={q} onChange={setQ} placeholder="Tranche, issuer or ID" />
           <Select id="tr-stage" label="Stage" value={stage} onChange={setStage} options={[{ value: '', label: 'All stages' }, ...TRANCHE_STAGES.map((s) => ({ value: s, label: s }))]} />
           <Select id="tr-issuer" label="Issuer" value={issuer} onChange={setIssuer} options={[{ value: '', label: 'All issuers' }, ...ISSUERS.map((i) => ({ value: i.id, label: issuerShort(i.id) }))]} />
-          <Select id="tr-risk" label="Risk status" value={risk} onChange={setRisk} options={[{ value: '', label: 'Any risk' }, ...RISKS.map((r) => ({ value: r, label: r }))]} />
           <label htmlFor="tr-from" className="flex flex-col gap-1"><span className="text-[11px] font-medium text-ink-3">Closing from</span>
             <input id="tr-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 rounded-lg border border-line bg-surface px-2 text-[12.5px]" /></label>
           <label htmlFor="tr-to" className="flex flex-col gap-1"><span className="text-[11px] font-medium text-ink-3">Closing to</span>
@@ -116,6 +113,8 @@ export function FinancePage() {
         {chips.length > 0 && <div className="border-b border-line px-5 py-2.5"><Chips chips={chips} onClear={clearAll} /></div>}
         <TrancheTable rows={rows} onOpen={(s) => openDrawer({ kind: 'tranche', id: s.tranche.id })} />
       </Card>
+
+      <PaymentsSection />
 
       <Card title={<span className="flex items-center gap-2">Monthly subscriptions <InfoTip text="Successful (allocated) subscriptions by tranche close month. Click a month to filter the tranche table." /></span>}>
         <SubscriptionTrend data={trend} height={230} selected={month || undefined} onMonth={(m) => setMonth(m === month ? '' : m)} />
@@ -127,26 +126,29 @@ export function FinancePage() {
 }
 
 function TrancheTable({ rows, onOpen }: { rows: TrancheStats[]; onOpen: (s: TrancheStats) => void }) {
+  const { thresholds } = useApp();
+  const released = new Map(allocationTracker().map((r) => [r.tranche.id, r]));
   return (
     <DataTable caption="Tranche table" rows={rows} rowKey={(s) => s.tranche.id} onRowClick={onOpen} maxHeight="560px" initialSort={{ key: 'close', dir: 'desc' }}
       columns={[
         { key: 'name', header: 'Tranche', render: (s) => <span className="whitespace-nowrap font-medium">{s.tranche.name}<span className="block text-[11.5px] font-normal text-ink-3">{s.tranche.id}</span></span>, sort: (s) => s.tranche.name },
         { key: 'issuer', header: 'Issuer', render: (s) => <span className="whitespace-nowrap text-ink-2">{issuerShort(s.tranche.issuerId)}</span>, sort: (s) => s.issuer, secondary: true },
-        { key: 'open', header: 'Opens', render: (s) => <span className="num whitespace-nowrap">{date(s.tranche.openDate)}</span>, sort: (s) => s.tranche.openDate, secondary: true },
         { key: 'close', header: 'Closes', render: (s) => <span className="num whitespace-nowrap">{date(s.tranche.closeDate)}</span>, sort: (s) => s.tranche.closeDate },
-        { key: 'target', header: 'Target', align: 'right', render: (s) => rm(s.tranche.target), sort: (s) => s.tranche.target },
-        { key: 'gross', header: 'Gross requests', align: 'right', render: (s) => rm(s.gross), sort: (s) => s.gross },
-        { key: 'succ', header: 'Successful', align: 'right', render: (s) => (s.indicative ? <span className="text-ink-3">Pending</span> : rm(s.successful)), sort: (s) => s.successful },
-        { key: 'subs', header: 'Subscribers', align: 'right', render: (s) => s.subscribers, sort: (s) => s.subscribers },
-        { key: 'ful', header: 'Fulfilment', align: 'right', render: (s) => (
-          <div className="ml-auto w-24"><div className="mb-1">{pct(s.fulfilment, 0)}{s.indicative && <span className="text-[11px] text-ink-3"> ind.</span>}</div>
-            <Progress value={s.fulfilment} tone={s.risk === 'Critical' ? 'crit' : s.risk === 'Attention' ? 'warn' : 'accent'} /></div>
-        ), sort: (s) => s.fulfilment },
+        { key: 'succ', header: 'Successful', align: 'right', render: (s) => (s.indicative || s.tranche.stage === 'Upcoming' ? <span className="text-ink-3">Not closed</span> : rm(s.successful)), sort: (s) => s.successful },
         { key: 'fee', header: 'Fee rate', align: 'right', render: (s) => pct(s.tranche.feeRate, 2), sort: (s) => s.tranche.feeRate },
         { key: 'rev', header: 'Recognised revenue', align: 'right', render: (s) => (s.revenue ? rm(s.revenue) : <span className="text-ink-3">RM 0</span>), sort: (s) => s.revenue },
-        { key: 'days', header: 'Days to / since close', align: 'right', render: (s) => (s.daysToClose >= 0 ? `${s.daysToClose} to close` : `${-s.daysToClose} since`), sort: (s) => s.daysToClose },
+        { key: 'release', header: 'Funds to issuer', render: (s) => {
+          const r = released.get(s.tranche.id);
+          if (s.tranche.stage === 'Issued / Settled' || s.tranche.stage === 'Matured') return <StatusBadge status={`Released ${dateShort(r?.releasedOn ?? s.tranche.issueDate)}`} tone="good" />;
+          if (s.tranche.stage === 'Closed') return <StatusBadge status={r?.steps.mint === 'blocked' ? `On hold · due ${dateShort(s.tranche.issueDate)}` : `Due ${dateShort(s.tranche.issueDate)}`} tone={r?.steps.mint === 'blocked' ? 'crit' : 'warn'} />;
+          return <span className="whitespace-nowrap text-[12px] text-ink-3">Expected {dateShort(s.tranche.issueDate)}</span>;
+        }, sort: (s) => s.tranche.issueDate },
+        { key: 'mat', header: 'Maturity', render: (s) => <span className="num whitespace-nowrap">{date(s.tranche.maturityDate)}</span>, sort: (s) => s.tranche.maturityDate, secondary: true },
+        { key: 'next', header: 'Next payment due', render: (s) => {
+          const n = nextPaymentFor(s.tranche.id, thresholds);
+          return n ? <span className="whitespace-nowrap"><span className="num">{dateShort(n.dueDate)}</span><span className="block text-[11.5px] text-ink-3">{n.type} · {rm(n.amountDue)}</span></span> : <span className="text-ink-3">—</span>;
+        }, sort: (s) => nextPaymentFor(s.tranche.id, thresholds)?.dueDate ?? '9999' },
         { key: 'stage', header: 'Stage', render: (s) => <StatusBadge status={s.tranche.stage} />, sort: (s) => TRANCHE_STAGES.indexOf(s.tranche.stage as TrancheStage) },
-        { key: 'risk', header: 'Risk', render: (s) => <span title={s.riskReason ?? undefined}><StatusBadge status={s.risk} tone={toneFor(s.risk === 'Attention' ? 'attention' : s.risk)} /></span>, sort: (s) => RISKS.indexOf(s.risk) },
       ]} />
   );
 }

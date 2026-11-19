@@ -18,6 +18,8 @@ import { allTrancheStats, closedPnl, monthlyRevenue, periodFinance } from '../sr
 import { activeInvestors, allInvestorMetrics, bands, funnel, isCtosIncomplete, isKycIncomplete } from '../src/lib/selectors/investors';
 import { govOpen, govOverdue, obligationOverdue } from '../src/lib/selectors/ops';
 import { buildPeriod } from '../src/lib/period';
+import { allocationTracker, paymentsView, subscriptionProgress } from '../src/lib/selectors/operations';
+import { daysFromAsOf } from '../src/data/asOf';
 
 const th = DEFAULT_THRESHOLDS;
 let failures = 0;
@@ -106,6 +108,18 @@ check('Only High risk needs review, and every High is pending or cleared', risks
 
 // Privacy: no investor names are held in the dashboard data
 check('Investors carry ID and initials only (no name field)', INVESTORS.every((i) => !('name' in i) && /^[A-Z]{1,6}$/.test(i.initials)));
+
+// Investor Operations and Finance payments
+const pays = paymentsView(th);
+check('Issuer funds received never exceed the amount due', pays.every((p) => p.received <= p.amountDue));
+check('Shortfall = due − received, only when due within 30 days', pays.every((p) => p.shortfall === (p.status === 'Due' ? p.amountDue - p.received : 0) && (p.shortfall === 0 || daysFromAsOf(p.dueDate) <= 30)));
+check('Paid payments: issuer paid in full and every investor repaid', pays.filter((p) => p.status === 'Paid').every((p) => p.received === p.amountDue && p.investorsPaidCount === p.investorsTotal));
+const alloc = allocationTracker();
+check('Allocated ≤ investors on every tracked tranche', alloc.every((r) => r.allocated <= r.investors), alloc.map((r) => `${r.tranche.id} ${r.allocated}/${r.investors}`).join(', '));
+check('Funds released only after allocation completes', alloc.every((r) => r.steps.release !== 'done' || r.steps.allocate === 'done'));
+const prog = subscriptionProgress(th, 10);
+check('Each tranche appears in one progress section only', new Set(prog.map((r) => r.tranche.id)).size === prog.length);
+check('Shortfall example: one payment short', pays.filter((p) => p.shortfall > 0).length >= 1, pays.filter((p) => p.shortfall > 0).map((p) => `${p.id} ${p.shortfall}`).join(', '));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

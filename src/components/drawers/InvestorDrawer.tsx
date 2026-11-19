@@ -27,7 +27,7 @@ export function InvestorDrawer({ id, onClose }: { id: string; onClose: () => voi
     <Drawer open onClose={onClose} title={investorLabel(inv)} eyebrow={`${inv.type} investor`}
       headerExtra={<>
         <StatusBadge status={inv.accountStatus} />
-        <StatusBadge status={`${risk.level} risk${risk.review === 'Pending review' ? ' · review' : ''}`} tone={risk.level === 'High' ? 'crit' : risk.level === 'Medium' ? 'warn' : 'good'} />
+        <StatusBadge status={`${risk.level} risk${risk.review === 'Pending review' ? ' · review' : ''}`} tone={risk.level === 'High' ? 'crit' : risk.level === 'Medium' ? 'accent' : 'mute'} />
         <StatusBadge status={`CTOS ${inv.ctos.toLowerCase()}`} />
         <StatusBadge status={`KYC ${inv.kyc.toLowerCase()}`} />
       </>}>

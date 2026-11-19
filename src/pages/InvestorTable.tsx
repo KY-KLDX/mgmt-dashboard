@@ -67,7 +67,7 @@ export function InvestorTable({ listKey, onClearList }: { listKey: string; onCle
     ), sort: (m) => `${m.inv.ctos}${m.inv.kyc}` },
     { key: 'risk', header: 'Risk', render: (m) => {
       const r = riskProfileFor(m.inv.id);
-      const tone = r.level === 'High' ? 'crit' : r.level === 'Medium' ? 'warn' : 'good';
+      const tone = r.level === 'High' ? 'crit' : r.level === 'Medium' ? 'accent' : 'mute';
       return <span title={r.factors.join(' · ') || 'No risk factors'}><StatusBadge status={r.review === 'Pending review' ? 'High · review' : r.level} tone={tone} /></span>;
     }, sort: (m) => ({ High: 0, Medium: 1, Low: 2 })[riskProfileFor(m.inv.id).level] },
     { key: 'acct', header: 'Account', render: (m) => <StatusBadge status={m.inv.accountStatus} />, sort: (m) => m.inv.accountStatus },

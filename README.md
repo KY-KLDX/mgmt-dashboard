@@ -19,8 +19,8 @@ Other scripts:
 | `npm run typecheck` | Strict TypeScript check |
 | `npm run build` | Production build to `dist/` |
 | `npm run build:single` | Single self-contained HTML file in `dist-single/` (for sharing) |
-| `npm run verify:data` | 36 reconciliation checks on the synthetic dataset |
-| `npm run smoke` | Browser smoke test: header search, period control, governance update (needs `npm run dev` running and a Chromium; set `CHROME_PATH`) |
+| `npm run verify:data` | 54 reconciliation checks on the synthetic dataset |
+| `npm run smoke` | 31 browser checks: header search, period control, Overview → Investor Operations hand-off, Finance redemptions, governance update (needs `npm run dev` running and a Chromium; set `CHROME_PATH`) |
 
 No backend, database, login, API key or external service is required. Fonts load from Google Fonts. If they are unavailable, the app falls back to system fonts.
 
@@ -32,9 +32,9 @@ React 18 · TypeScript (strict) · Vite · Tailwind CSS · Recharts · lucide-re
 
 Each page shows at most four KPI cards. Supporting detail sits behind the (i) icon on each card.
 
-1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, subscription progress for live and upcoming tranches, an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
-2. **Finance**: tranche pipeline, filterable tranche table, monthly subscriptions, monthly company P&L.
-3. **Investors**: four headline cards (Active investors, Total subscriptions, Onboarding incomplete, Failed top-ups); a row with **Risk profile** (synthetic AML/CDD rating, Low / Medium / High, with high-risk investors awaiting review), the onboarding funnel and value bands; a **recent activity** feed; **Account alerts** (failed top-ups, large deposit vs profile, deposit then quick withdrawal, recent bank-account change, onboarding stalls, KYC aging, accounts under review); and the full **investor table** (IDs only, with a Risk column). Clicking a risk level, band, funnel stage, alert or headline card filters the table.
+1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, subscription progress grouped as Current / Upcoming / Recently closed (hover a row for detail; clicking opens that tranche in Investor Operations, it does not open a drawer), an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
+2. **Finance** (the money view): tranche pipeline; a tranche table limited to money columns (successful amount, fee rate, recognised revenue, funds released to the issuer, maturity, next payment due); **Redemptions & payments** (profit and principal payments due, issuer funds received, investors repaid, and a shortfall warning when a payment is due within 30 days and the issuer has not paid in full); monthly subscriptions; monthly company P&L.
+3. **Investor Operations**: four headline cards (Total subscriptions and Active investors, styled as on the Overview, Onboarding incomplete, Failed top-ups); a row with **Risk profile** (synthetic AML/CDD rating, Low / Medium / High, with high-risk investors awaiting review), the onboarding funnel and value bands; a **recent activity** feed; **Account alerts** (failed top-ups, large deposit vs profile, deposit then quick withdrawal, recent bank-account change, onboarding stalls, KYC aging, accounts under review); **Subscription progress** (operational detail: target, raised, gross requests, subscribers, daily pace, days to close); **Allocation & minting** (after close: 1 Confirm → 2 Mint → 3 Allocate → 4 Release funds to the issuer); and the full **investor table** (IDs only, with a Risk column). Clicking a risk level, band, funnel stage, alert or headline card filters the table.
 4. **Issuers**: 30/60/90-day timeline and obligations table.
 5. **Technology**: incidents, top five risks with a linked risk matrix, resilience measures.
 6. **Governance**: My Actions, CEO & SMT, Board, Policies & applications, All.
@@ -49,6 +49,7 @@ Synthetic data is marked once, by the badge in the top bar. Definitions and cave
 - `tranches.ts`: 18 tranches. The applicable KLDX fee rate is stored on each tranche.
 - `investors.ts`: deterministic generator (seeded PRNG) for 58 investors, their subscriptions and wallet transactions. Tranche totals are *built from* subscription records, so every figure reconciles.
 - `pnl.ts`: company-level operating cost lines and budget. **P&L revenue is not stored.** It is taken from recognised tranche revenue for the month. Costs are never allocated to tranches, so no tranche profit is shown.
+- `allocations.ts`, `payments.ts`: hand-written post-close workflow and payment schedule (synthetic). Payment amounts are computed: profit = successful × profit rate × ½ per half-year; principal + profit = successful × (1 + rate × tenor/12); completed maturities use the actual payouts to investor wallets.
 - `obligations.ts`, `tech.ts`, `governance.ts`: obligations, incidents, cyber risks, resilience measures and governance items.
 - `thresholds.ts`: illustrative alert thresholds and investor bands. These are fixed demo values, not KLDX policy.
 - `dictionary.ts`: metric dictionary. Source systems and owners are marked *To be confirmed*.

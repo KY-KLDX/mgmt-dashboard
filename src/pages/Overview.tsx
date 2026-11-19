@@ -1,5 +1,5 @@
 import { AlertTriangle, CalendarDays, ChevronRight, Coins, ListChecks, Target, User, Users, UsersRound } from 'lucide-react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { HeroKpi, Panel } from '../components/ui/Showcase';
 import { deltaAbs, deltaPct } from '../components/ui/KpiCard';
@@ -11,7 +11,8 @@ import { monthsIn } from '../lib/period';
 import type { Alert } from '../lib/selectors/alerts';
 import { timelineEvents, type TimelineEvent } from '../lib/selectors/ops';
 import { compareDate } from '../lib/selectors/common';
-import { allTrancheStats, periodFinance, trendSeries, type TrancheStats } from '../lib/selectors/finance';
+import { issuerShort, periodFinance, trendSeries, type TrancheStats } from '../lib/selectors/finance';
+import { subscriptionProgress, type ProgressRow } from '../lib/selectors/operations';
 import { activeInvestors, allInvestorMetrics } from '../lib/selectors/investors';
 import { useApp } from '../state/AppState';
 import { useFillHeight, useFitCount } from '../hooks/useFit';
@@ -22,6 +23,30 @@ export function shortTitle(a: Alert): string {
     .replace(/ — (overdue|blocked|awaiting CEO decision|preparation deadline missed|\d+% ready for Board)$/, '')
     .replace(/^(Critical|High) cyber risk with overdue treatment: /, 'Cyber risk: ')
     .replace(/ \(synthetic\)$/, '');
+}
+
+/** Read-only detail shown while hovering a tranche row; clicking goes to Investor Operations. */
+function TrancheHoverCard({ row: s, x, y }: { row: ProgressRow; x: number; y: number }) {
+  const days = daysFromAsOf(s.tranche.closeDate);
+  const left = Math.min(x + 16, window.innerWidth - 300);
+  const top = Math.min(y + 16, window.innerHeight - 230);
+  const facts: [string, string][] = [
+    ['Issuer', issuerShort(s.tranche.issuerId)],
+    ['Opens', date(s.tranche.openDate)],
+    [days >= 0 ? 'Days to close' : 'Closed', days >= 0 ? `${days}` : `${-days} days ago`],
+    ['Gross requests', rm(s.gross)],
+    ['Subscribers', `${s.subscribers}`],
+    ...(s.dailyPace !== null ? [['Daily pace', `${rm(s.dailyPace)}/day`] as [string, string]] : []),
+  ];
+  return (
+    <div role="tooltip" className="pointer-events-none fixed z-[80] w-[280px] rounded-xl border border-line bg-surface p-3.5 text-[12.5px] shadow-lift" style={{ left, top }}>
+      <div className="mb-2 font-semibold">{s.tranche.name}</div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+        {facts.map(([k, v]) => <Fragment key={k}><dt className="text-ink-3">{k}</dt><dd className="num text-right">{v}</dd></Fragment>)}
+      </dl>
+      <div className="mt-2.5 border-t border-line pt-2 text-[11.5px] text-accent-ink">Click for full detail in Investor Operations</div>
+    </div>
+  );
 }
 
 function statusOf(s: TrancheStats): { label: string; cls: string } {
@@ -47,7 +72,7 @@ function DueChip({ a }: { a: Alert }) {
 const RISK_DOT: Record<TimelineEvent['risk'], string> = { Critical: 'bg-crit', High: 'bg-warn', Medium: 'bg-violet', Low: 'bg-info' };
 
 export function OverviewPage() {
-  const { period, thresholds, alerts, navigate, openDrawer } = useApp();
+  const { period, thresholds, alerts, navigate } = useApp();
   const [hover, setHover] = useState<string | null>(null);
 
   const fin = periodFinance(period, thresholds);
@@ -73,16 +98,16 @@ export function OverviewPage() {
   ];
   const total = groups.reduce((a, g) => a + g.n, 0);
 
-  // Live and upcoming tranches first, then the most recently closed ones when there is room.
-  const stats = allTrancheStats(thresholds);
-  const live = stats.filter((s) => ['Upcoming', 'Open', 'Fully Subscribed'].includes(s.tranche.stage)).sort((a, b) => a.tranche.closeDate.localeCompare(b.tranche.closeDate));
-  const closed = stats.filter((s) => !['Upcoming', 'Open', 'Fully Subscribed'].includes(s.tranche.stage)).sort((a, b) => b.tranche.closeDate.localeCompare(a.tranche.closeDate));
-  const progressAll = [...live, ...closed];
+  // Current and upcoming tranches always show; recently closed ones fill any spare space.
+  const progressAll = subscriptionProgress(thresholds, 10);
+  const pinned = progressAll.filter((r) => r.section !== 'Recently closed').length;
+  const [tip, setTip] = useState<{ row: ProgressRow; x: number; y: number } | null>(null);
+  const openInOps = (id: string) => navigate({ page: 'investors', params: { tranche: id } });
   const milestonesAll = timelineEvents().filter((e) => e.date >= AS_OF);
 
   // Fill the screen when there is room; otherwise keep the compact lists and scroll.
   const fill = useFillHeight(820);
-  const fitProgress = useFitCount(fill.height !== null, progressAll.length, live.length);
+  const fitProgress = useFitCount(fill.height !== null, progressAll.length, pinned);
   const fitMilestones = useFitCount(fill.height !== null, milestonesAll.length, 3);
   const fitDecisions = useFitCount(fill.height !== null, alerts.length, 3);
   const progress = progressAll.slice(0, fitProgress.count);
@@ -113,34 +138,50 @@ export function OverviewPage() {
               <table className="w-full border-separate border-spacing-0 text-left text-[13px]">
                 <caption className="sr-only">Subscription progress: live and upcoming tranches, then recently closed</caption>
                 <thead>
-                  <tr className="text-[11.5px] text-ink-2">
+                  <tr className="text-[10.5px] uppercase tracking-[0.12em] text-ink-2">
                     {['Tranche', 'Target raise', 'Raised so far', 'Progress', 'Closing date', 'Status'].map((h, i) => (
-                      <th key={h} scope="col" className={`whitespace-nowrap border-b border-line bg-sunken px-3 py-2 font-semibold ${i === 1 || i === 2 ? 'text-right' : ''} ${i === 0 ? 'rounded-l-md' : ''} ${i === 5 ? 'rounded-r-md' : ''}`}>{h}</th>
+                      <th key={h} scope="col" className={`whitespace-nowrap bg-sunken px-3 py-2.5 font-semibold ${i === 1 || i === 2 ? 'text-right' : ''} ${i === 0 ? 'rounded-l-lg' : ''} ${i === 5 ? 'rounded-r-lg' : ''}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {progress.map((s) => {
+                  {progress.map((s, i) => {
                     const st = statusOf(s);
-                    const raised = s.indicative || s.tranche.stage === 'Upcoming' ? s.pending : s.successful;
+                    const header = i === 0 || progress[i - 1].section !== s.section;
+                    const label = s.section === 'Current' ? 'Current tranches' : s.section === 'Upcoming' ? 'Upcoming tranches' : 'Recently closed';
                     return (
-                      <tr key={s.tranche.id} data-fit tabIndex={0} onClick={() => openDrawer({ kind: 'tranche', id: s.tranche.id })}
-                        onKeyDown={(e) => { if (e.key === 'Enter') openDrawer({ kind: 'tranche', id: s.tranche.id }); }}
-                        className="cursor-pointer hover:bg-accent-soft/50 focus-visible:bg-accent-soft/60 focus-visible:outline-none">
-                        <td className="border-b border-line/70 px-3 py-2.5"><span className="whitespace-nowrap"><span className="block font-semibold">{s.tranche.id}</span><span className="block text-[12px] text-ink-3">{s.tranche.name}</span></span></td>
-                        <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5 text-right">{rm(s.tranche.target)}</td>
-                        <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5 text-right">{rm(raised)}</td>
-                        <td className="border-b border-line/70 px-3 py-2.5">
-                          <span className="flex min-w-[140px] items-center gap-2.5"><span className="num w-10 font-semibold">{pct(s.fulfilment, 0)}</span><span className="flex-1"><Progress value={s.fulfilment} tone={s.risk === 'Critical' || s.risk === 'Attention' ? 'crit' : 'accent'} label={`${s.tranche.name} progress`} /></span></span>
-                        </td>
-                        <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5">{date(s.tranche.closeDate)}</td>
-                        <td className="border-b border-line/70 px-3 py-2.5"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${st.cls}`}><span className="h-2 w-2 rounded-full bg-current" aria-hidden />{st.label}</span></td>
-                      </tr>
+                      <Fragment key={s.tranche.id}>
+                        {header && (
+                          <tr aria-hidden data-fit>
+                            <td colSpan={6} className="pt-2">
+                              <span className="flex items-center gap-2.5 rounded-lg bg-accent-soft/60 px-3 py-1.5">
+                                <span className="h-4 w-0.5 rounded bg-accent" />
+                                <span className="font-display text-[15px] font-semibold italic text-ink">{label}</span>
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+                        <tr data-fit tabIndex={0} aria-label={`${s.tranche.id} ${s.tranche.name}: ${pct(s.fulfilment, 0)} of target. Open in Investor Operations.`}
+                          onClick={() => openInOps(s.tranche.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') openInOps(s.tranche.id); }}
+                          onMouseMove={(e) => setTip({ row: s, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}
+                          className="cursor-pointer hover:bg-sunken/70 focus-visible:bg-sunken focus-visible:outline-none">
+                          <td className="border-b border-line/70 px-3 py-2.5"><span className="whitespace-nowrap"><span className="block font-semibold">{s.tranche.id}</span><span className="block text-[12px] text-ink-3">{s.tranche.name}</span></span></td>
+                          <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5 text-right">{rm(s.tranche.target)}</td>
+                          <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5 text-right">{rm(s.raised)}</td>
+                          <td className="border-b border-line/70 px-3 py-2.5">
+                            <span className="flex min-w-[140px] items-center gap-2.5"><span className="num w-10 font-semibold">{pct(s.fulfilment, 0)}</span><span className="flex-1"><Progress value={s.fulfilment} tone={s.risk === 'Critical' || s.risk === 'Attention' ? 'crit' : 'accent'} label={`${s.tranche.name} progress`} /></span></span>
+                          </td>
+                          <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5">{date(s.tranche.closeDate)}</td>
+                          <td className="border-b border-line/70 px-3 py-2.5"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${st.cls}`}><span className="h-2 w-2 rounded-full bg-current" aria-hidden />{st.label}</span></td>
+                        </tr>
+                      </Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+            {tip && <TrancheHoverCard row={tip.row} x={tip.x} y={tip.y} />}
           </Panel>
         </div>
 

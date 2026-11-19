@@ -14,7 +14,7 @@ const nav = (name) => p.getByRole('navigation', { name: 'Primary' }).getByRole('
 await p.goto(BASE); await p.waitForTimeout(900);
 
 // Pages render
-for (const page of [/Finance/, /Investors/, /Issuers/, /Technology/, /Governance/, /Executive Overview/]) {
+for (const page of [/Finance/, /Investor Operations/, /Issuers/, /Technology/, /Governance/, /Executive Overview/]) {
   await nav(page); await p.waitForTimeout(250);
 }
 check('All six pages render', errors.length === 0);
@@ -45,7 +45,7 @@ check('Year to date option', (await p.locator('#from').inputValue()) === '2026-0
 check('No demo settings button', (await p.getByRole('button', { name: /Demo settings/ }).count()) === 0);
 
 // Investors page: activity feed and exceptions
-await nav(/Investors/); await p.waitForTimeout(300);
+await nav(/Investor Operations/); await p.waitForTimeout(300);
 check('Investors page shows activity feed', await p.getByText('Recent investor activity').isVisible());
 await p.getByRole('tab', { name: 'Profile updates' }).click(); await p.waitForTimeout(150);
 check('Profile updates tab lists investor-type change', await p.evaluate(() => document.body.innerText.includes('Updated investor type')));
@@ -64,6 +64,25 @@ check('Clearing the filter restores the full table', /\b36 investors\b/.test(awa
 await p.getByRole('button', { name: /View all activity/ }).click(); await p.waitForTimeout(300);
 check('View all activity opens the full feed', (await p.locator('[role=dialog] h2').first().innerText()) === 'Investor activity');
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+
+// Overview subscription progress: hover shows detail, click goes to Investor Operations (no drawer)
+await nav(/Executive Overview/); await p.waitForTimeout(400);
+const ovRow = p.locator('tr[aria-label*="Open in Investor Operations"]').first();
+const ovId = (await ovRow.getAttribute('aria-label')).split(' ')[0];
+check('Overview progress has Current / Upcoming sections', await p.evaluate(() => /Current tranches/.test(document.body.innerText) && /Upcoming tranches/.test(document.body.innerText)));
+await ovRow.hover(); await p.waitForTimeout(200);
+check('Hovering a tranche shows the detail card', await p.getByRole('tooltip').filter({ hasText: 'Investor Operations' }).isVisible());
+await ovRow.click(); await p.waitForTimeout(700);
+check('Clicking a tranche opens no drawer', (await p.locator('[role=dialog]').count()) === 0);
+check('…and lands on Investor Operations with the row highlighted', await p.locator(`#sp-${ovId}`).evaluate((el) => el.className.includes('bg-accent-soft')), ovId);
+check('Allocation & minting tracker renders', await p.evaluate(() => /Allocation & minting/i.test(document.body.innerText) && /Release funds/i.test(document.body.innerText)));
+
+// Finance: money view with redemptions, no operational risk filter
+await nav(/Finance/); await p.waitForTimeout(400);
+const finText = await p.evaluate(() => document.body.innerText);
+check('Finance shows Redemptions & payments with the shortfall', /Redemptions & payments/.test(finText) && /Shortfall RM\s?612,750/.test(finText));
+check('Finance tranche table has no risk filter', (await p.locator('#tr-risk').count()) === 0);
+check('Finance tranche table shows next payment due', /Next payment due/.test(finText));
 
 // Notifications and governance close flow
 const attention = async () => Number((await p.getByRole('button', { name: /Notifications:/ }).getAttribute('aria-label')).match(/\d+/)[0]);

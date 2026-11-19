@@ -8,9 +8,9 @@ import { pct } from '../lib/format';
 import { investorLabel } from '../lib/identity';
 
 const LEVELS: { level: RiskLevel3; color: string; key: string }[] = [
-  { level: 'Low', color: 'rgb(var(--good))', key: 'risk:low' },
-  { level: 'Medium', color: 'rgb(var(--warn))', key: 'risk:medium' },
-  { level: 'High', color: 'rgb(var(--crit))', key: 'risk:high' },
+  { level: 'Low', color: 'rgb(var(--accent) / 0.22)', key: 'risk:low' },
+  { level: 'Medium', color: 'rgb(var(--accent) / 0.55)', key: 'risk:medium' },
+  { level: 'High', color: 'rgb(var(--accent))', key: 'risk:high' },
 ];
 
 /** Synthetic AML/CDD risk distribution; High-risk investors awaiting review are listed for follow-up. */
@@ -66,7 +66,7 @@ export function RiskProfileCard({ onFilter, onOpen }: { onFilter: (key: string) 
                 <li key={inv.id}>
                   <button onClick={() => onOpen(inv.id)} title={r.factors.join(' · ')} className="flex w-full items-center gap-2 py-2 text-left hover:opacity-80">
                     <span className="num min-w-0 flex-1 truncate text-[13px] font-semibold">{investorLabel(inv)}</span>
-                    <span className="rounded-full bg-crit-soft px-2 py-0.5 text-[11px] font-semibold text-crit">High</span>
+                    <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">High</span>
                     <ChevronRight size={14} className="shrink-0 text-ink-3" aria-hidden />
                   </button>
                 </li>

@@ -62,7 +62,7 @@ function MobileNav() {
       <select id="mobile-nav" value={page} onChange={(e) => navigate({ page: e.target.value as typeof page })} className="h-8 w-[40vw] min-w-0 rounded-md bg-rail-hover px-2 text-[13px] text-rail-ink">
         <option value="overview">Executive Overview</option>
         <option value="finance">Finance</option>
-        <option value="investors">Investors</option>
+        <option value="investors">Investor Operations</option>
         <option value="issuers">Issuers</option>
         <option value="technology">Technology</option>
         <option value="governance">Governance</option>
