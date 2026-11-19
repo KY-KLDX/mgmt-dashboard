@@ -119,6 +119,14 @@ check('Allocated ≤ investors on every tracked tranche', alloc.every((r) => r.a
 check('Funds released only after allocation completes', alloc.every((r) => r.steps.release !== 'done' || r.steps.allocate === 'done'));
 const prog = subscriptionProgress(th, 10);
 check('Each tranche appears in one progress section only', new Set(prog.map((r) => r.tranche.id)).size === prog.length);
+const live = subscriptionProgress(th, 0);
+check('Overview progress has no recently closed tranches', live.every((r) => r.section !== 'Recently closed'));
+check('Expected at close is never below raised', live.filter((r) => r.section === 'Current').every((r) => (r.projectedAtClose ?? 0) >= r.raised));
+check('Verdict follows thresholds (filled / ≥100% / ≥80% / below)', live.filter((r) => r.section === 'Current').every((r) => {
+  const t = r.tranche.target, p = r.projectedAtClose! / t;
+  const want = r.raised >= t ? 'Filled' : r.risk === 'Critical' ? 'At risk' : p >= 1 ? 'On pace' : p >= 0.8 ? 'Close call' : 'At risk';
+  return r.verdict === want;
+}), live.filter((r) => r.verdict).map((r) => `${r.tranche.id} ${r.verdict}`).join(', '));
 check('Shortfall example: one payment short', pays.filter((p) => p.shortfall > 0).length >= 1, pays.filter((p) => p.shortfall > 0).map((p) => `${p.id} ${p.shortfall}`).join(', '));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');

@@ -17,6 +17,18 @@ export interface ProgressRow extends TrancheStats {
   raised: number;
   /** Average raised per day since opening (live tranches only). */
   dailyPace: number | null;
+  /** Straight-line estimate of the amount raised by close: raised + daily pace × days left (live tranches only). */
+  projectedAtClose: number | null;
+  /** Executive verdict for live tranches, from the estimate at close. */
+  verdict: 'Filled' | 'On pace' | 'Close call' | 'At risk' | null;
+}
+
+function verdictFor(s: TrancheStats, raised: number, projected: number): NonNullable<ProgressRow['verdict']> {
+  const target = s.tranche.target;
+  if (raised >= target) return 'Filled';
+  if (s.risk === 'Critical') return 'At risk';
+  const share = projected / target;
+  return share >= 1 ? 'On pace' : share >= 0.8 ? 'Close call' : 'At risk';
 }
 
 export function subscriptionProgress(th: Thresholds, closedLimit = 4): ProgressRow[] {
@@ -24,7 +36,10 @@ export function subscriptionProgress(th: Thresholds, closedLimit = 4): ProgressR
   const row = (s: TrancheStats, section: ProgressRow['section']): ProgressRow => {
     const raised = s.indicative || s.tranche.stage === 'Upcoming' ? s.pending : s.successful;
     const daysOpen = Math.max(1, daysBetween(s.tranche.openDate, AS_OF < s.tranche.closeDate ? AS_OF : s.tranche.closeDate));
-    return { ...s, section, raised, dailyPace: section === 'Current' ? Math.round(raised / daysOpen) : null };
+    if (section !== 'Current') return { ...s, section, raised, dailyPace: null, projectedAtClose: null, verdict: null };
+    const dailyPace = Math.round(raised / daysOpen);
+    const projectedAtClose = raised + dailyPace * Math.max(0, daysFromAsOf(s.tranche.closeDate));
+    return { ...s, section, raised, dailyPace, projectedAtClose, verdict: verdictFor(s, raised, projectedAtClose) };
   };
   const byClose = (a: TrancheStats, b: TrancheStats) => a.tranche.closeDate.localeCompare(b.tranche.closeDate);
   return [

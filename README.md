@@ -19,8 +19,8 @@ Other scripts:
 | `npm run typecheck` | Strict TypeScript check |
 | `npm run build` | Production build to `dist/` |
 | `npm run build:single` | Single self-contained HTML file in `dist-single/` (for sharing) |
-| `npm run verify:data` | 54 reconciliation checks on the synthetic dataset |
-| `npm run smoke` | 31 browser checks: header search, period control, Overview → Investor Operations hand-off, Finance redemptions, governance update (needs `npm run dev` running and a Chromium; set `CHROME_PATH`) |
+| `npm run verify:data` | 57 reconciliation checks on the synthetic dataset |
+| `npm run smoke` | 33 browser checks (including a phone-width check): header search, period control, Overview → Investor Operations hand-off, Finance redemptions, governance update (needs `npm run dev` running and a Chromium; set `CHROME_PATH`) |
 
 No backend, database, login, API key or external service is required. Fonts load from Google Fonts. If they are unavailable, the app falls back to system fonts.
 
@@ -32,7 +32,7 @@ React 18 · TypeScript (strict) · Vite · Tailwind CSS · Recharts · lucide-re
 
 Each page shows at most four KPI cards. Supporting detail sits behind the (i) icon on each card.
 
-1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, subscription progress grouped as Current / Upcoming / Recently closed (hover a row for detail; clicking opens that tranche in Investor Operations, it does not open a drawer), an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
+1. **Executive Overview**: three headline cards (Total subscriptions, Revenue, Active investors) with sparklines, **Subscription progress** as an executive summary rather than a table: one bar per live tranche with a verdict (Oversubscribed / On pace / Close call / At risk) and a straight-line *expected at close* estimate, plus a one-line note of upcoming tranches. Closed tranches are not shown here. Hovering shows more detail; clicking opens the tranche in Investor Operations' full table (no drawer). The estimate is raised + average daily pace × days left; it flatters tranches that had an early rush, so it is labelled as an estimate, an investor snapshot donut (active / approved but not invested / not yet verified), the next three issuer milestones, and the top three priority decisions.
 2. **Finance** (the money view): tranche pipeline; a tranche table limited to money columns (successful amount, fee rate, recognised revenue, funds released to the issuer, maturity, next payment due); **Redemptions & payments** (profit and principal payments due, issuer funds received, investors repaid, and a shortfall warning when a payment is due within 30 days and the issuer has not paid in full); monthly subscriptions; monthly company P&L.
 3. **Investor Operations**: four headline cards (Total subscriptions and Active investors, styled as on the Overview, Onboarding incomplete, Failed top-ups); a row with **Risk profile** (synthetic AML/CDD rating, Low / Medium / High, with high-risk investors awaiting review), the onboarding funnel and value bands; a **recent activity** feed; **Account alerts** (failed top-ups, large deposit vs profile, deposit then quick withdrawal, recent bank-account change, onboarding stalls, KYC aging, accounts under review); **Subscription progress** (operational detail: target, raised, gross requests, subscribers, daily pace, days to close); **Allocation & minting** (after close: 1 Confirm → 2 Mint → 3 Allocate → 4 Release funds to the issuer); and the full **investor table** (IDs only, with a Risk column). Clicking a risk level, band, funnel stage, alert or headline card filters the table.
 4. **Issuers**: 30/60/90-day timeline and obligations table.

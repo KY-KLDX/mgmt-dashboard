@@ -3,15 +3,14 @@ import { Fragment, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { HeroKpi, Panel } from '../components/ui/Showcase';
 import { deltaAbs, deltaPct } from '../components/ui/KpiCard';
-import { Progress } from '../components/ui/Primitives';
 import { AS_OF, TREND_MONTHS, daysFromAsOf, monthEnd } from '../data/asOf';
-import { date, int, pct, rm, rmShort } from '../lib/format';
+import { date, dateShort, int, pct, rm, rmShort } from '../lib/format';
 import type { LinkTarget } from '../lib/nav';
 import { monthsIn } from '../lib/period';
 import type { Alert } from '../lib/selectors/alerts';
 import { timelineEvents, type TimelineEvent } from '../lib/selectors/ops';
 import { compareDate } from '../lib/selectors/common';
-import { issuerShort, periodFinance, trendSeries, type TrancheStats } from '../lib/selectors/finance';
+import { issuerShort, periodFinance, trendSeries } from '../lib/selectors/finance';
 import { subscriptionProgress, type ProgressRow } from '../lib/selectors/operations';
 import { activeInvestors, allInvestorMetrics } from '../lib/selectors/investors';
 import { useApp } from '../state/AppState';
@@ -49,14 +48,51 @@ function TrancheHoverCard({ row: s, x, y }: { row: ProgressRow; x: number; y: nu
   );
 }
 
-function statusOf(s: TrancheStats): { label: string; cls: string } {
-  if (s.tranche.stage === 'Upcoming') return { label: 'Not open', cls: 'bg-mute-soft text-mute' };
-  if (s.risk === 'Critical' || s.risk === 'Attention') return { label: 'At risk', cls: 'bg-crit-soft text-crit' };
-  if (s.tranche.stage === 'Fully Subscribed') return { label: 'Fully subscribed', cls: 'bg-good-soft text-good' };
-  if (s.tranche.stage === 'Closed') return { label: 'Closed', cls: 'bg-info-soft text-info' };
-  if (s.tranche.stage === 'Issued / Settled') return { label: 'Issued', cls: 'bg-mute-soft text-mute' };
-  if (s.tranche.stage === 'Matured') return { label: 'Matured', cls: 'bg-mute-soft text-mute' };
-  return { label: 'On track', cls: 'bg-good-soft text-good' };
+const VERDICT: Record<NonNullable<ProgressRow['verdict']>, { cls: string; bar: string }> = {
+  Filled: { cls: 'bg-good-soft text-good', bar: 'bg-good' },
+  'On pace': { cls: 'bg-good-soft text-good', bar: 'bg-accent' },
+  'Close call': { cls: 'bg-warn-soft text-warn', bar: 'bg-warn' },
+  'At risk': { cls: 'bg-crit-soft text-crit', bar: 'bg-crit' },
+};
+
+/** Compact money for the summary line, e.g. RM 1.84m. */
+const rmM = (n: number) => `RM ${(n / 1e6).toFixed(2)}m`;
+
+/** One live tranche: verdict, a bar with the straight-line estimate to close, and the target tick. */
+function ProgressBlock({ s, onOpen, onTip }: { s: ProgressRow; onOpen: (id: string) => void; onTip: (t: { row: ProgressRow; x: number; y: number } | null) => void }) {
+  const v = s.verdict ?? 'On pace';
+  const target = s.tranche.target;
+  const projected = s.projectedAtClose ?? s.raised;
+  const scale = Math.max(1, Math.min(1.25, Math.max(s.raised, projected) / target));
+  const w = (n: number) => `${Math.min(100, (n / target / scale) * 100)}%`;
+  const days = daysFromAsOf(s.tranche.closeDate);
+  const label = v === 'Filled' ? (s.raised > target ? 'Oversubscribed' : 'Filled') : v;
+  // Above 100% the straight-line estimate is not meaningful as a number; say it is on pace to fill.
+  const tail = v === 'Filled' ? `${pct(s.raised / target, 0)} of target` : projected >= target ? 'on pace to fill' : `~${pct(projected / target, 0)} at close`;
+  return (
+    <li data-fit>
+      <div role="button" tabIndex={0} aria-label={`${s.tranche.id} ${s.tranche.name}: ${pct(s.fulfilment, 0)} of target, ${label}. Open in Investor Operations.`}
+        onClick={() => onOpen(s.tranche.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(s.tranche.id); }}
+        onMouseMove={(e) => onTip({ row: s, x: e.clientX, y: e.clientY })} onMouseLeave={() => onTip(null)}
+        className="-mx-3 cursor-pointer rounded-xl px-3 py-2 hover:bg-sunken/70 focus-visible:bg-sunken focus-visible:outline-none">
+        <div className="flex items-center justify-between gap-3">
+          <span className="min-w-0 text-[13.5px] sm:truncate"><span className="font-semibold">{s.tranche.id}</span> <span className="text-ink-2">{s.tranche.name}</span></span>
+          <span className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${VERDICT[v].cls}`}><span className="h-2 w-2 rounded-full bg-current" aria-hidden />{label}</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="num w-11 shrink-0 font-display text-[18px] font-semibold leading-none">{pct(s.fulfilment, 0)}</span>
+          <div className="relative h-2.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-sunken" aria-hidden>
+            {projected > s.raised && <div className={`absolute inset-y-0 left-0 rounded-full opacity-25 ${VERDICT[v].bar}`} style={{ width: w(projected) }} />}
+            <div className={`absolute inset-y-0 left-0 rounded-full ${VERDICT[v].bar}`} style={{ width: w(s.raised) }} />
+            <div className="absolute inset-y-[-2px] w-0.5 bg-ink/60" style={{ left: `calc(${(1 / scale) * 100}% - 1px)` }} title="Target" />
+          </div>
+          <span className="num basis-full text-[12px] text-ink-3 xl:w-[18.5rem] xl:basis-auto xl:whitespace-nowrap">
+            {rmM(s.raised)} of {rmM(target)} · {days > 0 ? `${days} day${days === 1 ? '' : 's'} left` : 'closes today'} · {tail}
+          </span>
+        </div>
+      </div>
+    </li>
+  );
 }
 
 function DueChip({ a }: { a: Alert }) {
@@ -98,19 +134,19 @@ export function OverviewPage() {
   ];
   const total = groups.reduce((a, g) => a + g.n, 0);
 
-  // Current and upcoming tranches always show; recently closed ones fill any spare space.
-  const progressAll = subscriptionProgress(thresholds, 10);
-  const pinned = progressAll.filter((r) => r.section !== 'Recently closed').length;
+  // Executive view: live tranches with a verdict, then upcoming ones on a single line each. Closed tranches live in Investor Operations.
+  const progressAll = subscriptionProgress(thresholds, 0);
+  const current = progressAll.filter((r) => r.section === 'Current');
+  const upcoming = progressAll.filter((r) => r.section === 'Upcoming');
   const [tip, setTip] = useState<{ row: ProgressRow; x: number; y: number } | null>(null);
   const openInOps = (id: string) => navigate({ page: 'investors', params: { tranche: id } });
   const milestonesAll = timelineEvents().filter((e) => e.date >= AS_OF);
 
   // Fill the screen when there is room; otherwise keep the compact lists and scroll.
   const fill = useFillHeight(820);
-  const fitProgress = useFitCount(fill.height !== null, progressAll.length, pinned);
+  const fitProgress = useFitCount(fill.height !== null, progressAll.length, progressAll.length);
   const fitMilestones = useFitCount(fill.height !== null, milestonesAll.length, 3);
   const fitDecisions = useFitCount(fill.height !== null, alerts.length, 3);
-  const progress = progressAll.slice(0, fitProgress.count);
   const milestones = milestonesAll.slice(0, fitMilestones.count);
   const decisions = alerts.slice(0, fitDecisions.count);
 
@@ -133,53 +169,27 @@ export function OverviewPage() {
 
       <div className={`grid grid-cols-1 gap-5 xl:grid-cols-12 ${fill.height ? 'min-h-0 flex-1 grid-rows-[minmax(0,1fr)]' : ''}`}>
         <div className="min-h-0 min-w-0 xl:col-span-7">
-          <Panel icon={Target} title="Subscription progress">
-            <div ref={fitProgress.ref} className="min-h-0 flex-1 overflow-hidden px-3 pb-2">
-              <table className="w-full border-separate border-spacing-0 text-left text-[13px]">
-                <caption className="sr-only">Subscription progress: live and upcoming tranches, then recently closed</caption>
-                <thead>
-                  <tr className="text-[10.5px] uppercase tracking-[0.12em] text-ink-2">
-                    {['Tranche', 'Target raise', 'Raised so far', 'Progress', 'Closing date', 'Status'].map((h, i) => (
-                      <th key={h} scope="col" className={`whitespace-nowrap bg-sunken px-3 py-2.5 font-semibold ${i === 1 || i === 2 ? 'text-right' : ''} ${i === 0 ? 'rounded-l-lg' : ''} ${i === 5 ? 'rounded-r-lg' : ''}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {progress.map((s, i) => {
-                    const st = statusOf(s);
-                    const header = i === 0 || progress[i - 1].section !== s.section;
-                    const label = s.section === 'Current' ? 'Current tranches' : s.section === 'Upcoming' ? 'Upcoming tranches' : 'Recently closed';
-                    return (
-                      <Fragment key={s.tranche.id}>
-                        {header && (
-                          <tr aria-hidden data-fit>
-                            <td colSpan={6} className="pt-2">
-                              <span className="flex items-center gap-2.5 rounded-lg bg-accent-soft/60 px-3 py-1.5">
-                                <span className="h-4 w-0.5 rounded bg-accent" />
-                                <span className="font-display text-[15px] font-semibold italic text-ink">{label}</span>
-                              </span>
-                            </td>
-                          </tr>
-                        )}
-                        <tr data-fit tabIndex={0} aria-label={`${s.tranche.id} ${s.tranche.name}: ${pct(s.fulfilment, 0)} of target. Open in Investor Operations.`}
-                          onClick={() => openInOps(s.tranche.id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') openInOps(s.tranche.id); }}
-                          onMouseMove={(e) => setTip({ row: s, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}
-                          className="cursor-pointer hover:bg-sunken/70 focus-visible:bg-sunken focus-visible:outline-none">
-                          <td className="border-b border-line/70 px-3 py-2.5"><span className="whitespace-nowrap"><span className="block font-semibold">{s.tranche.id}</span><span className="block text-[12px] text-ink-3">{s.tranche.name}</span></span></td>
-                          <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5 text-right">{rm(s.tranche.target)}</td>
-                          <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5 text-right">{rm(s.raised)}</td>
-                          <td className="border-b border-line/70 px-3 py-2.5">
-                            <span className="flex min-w-[140px] items-center gap-2.5"><span className="num w-10 font-semibold">{pct(s.fulfilment, 0)}</span><span className="flex-1"><Progress value={s.fulfilment} tone={s.risk === 'Critical' || s.risk === 'Attention' ? 'crit' : 'accent'} label={`${s.tranche.name} progress`} /></span></span>
-                          </td>
-                          <td className="num whitespace-nowrap border-b border-line/70 px-3 py-2.5">{date(s.tranche.closeDate)}</td>
-                          <td className="border-b border-line/70 px-3 py-2.5"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${st.cls}`}><span className="h-2 w-2 rounded-full bg-current" aria-hidden />{st.label}</span></td>
-                        </tr>
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <Panel icon={Target} title="Subscription progress" info="Will each live tranche reach its target? Expected at close is a straight-line estimate from the average daily pace so far. Full detail is in Investor Operations.">
+            {/* Nothing is hidden: if the card is shorter than the list, it scrolls inside the card. */}
+            <div ref={fitProgress.ref} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-3">
+              <ul className="divide-y divide-line/70" aria-label="Live tranches">
+                {current.map((s) => <ProgressBlock key={s.tranche.id} s={s} onOpen={openInOps} onTip={setTip} />)}
+              </ul>
+              {upcoming.length > 0 && (
+                <ul data-fit className="mt-1 border-t border-line pt-1.5" aria-label="Upcoming tranches">
+                  {upcoming.map((s) => (
+                    <li key={s.tranche.id}>
+                      <button onClick={() => openInOps(s.tranche.id)} aria-label={`${s.tranche.id} ${s.tranche.name}: opens ${date(s.tranche.openDate)}. Open in Investor Operations.`}
+                        className="-mx-2 flex w-[calc(100%+1rem)] flex-wrap items-baseline gap-x-2 rounded-lg px-2 py-1 text-left text-[12.5px] hover:bg-sunken/70">
+                        <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-3">Upcoming</span>
+                        <span className="font-semibold">{s.tranche.id}</span>
+                        <span className="text-ink-2">{s.tranche.name}</span>
+                        <span className="num text-ink-3">· opens {dateShort(s.tranche.openDate)} · {rmM(s.tranche.target)} target</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {tip && <TrancheHoverCard row={tip.row} x={tip.x} y={tip.y} />}
           </Panel>

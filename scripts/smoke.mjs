@@ -67,15 +67,25 @@ await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 
 // Overview subscription progress: hover shows detail, click goes to Investor Operations (no drawer)
 await nav(/Executive Overview/); await p.waitForTimeout(400);
-const ovRow = p.locator('tr[aria-label*="Open in Investor Operations"]').first();
+const ovRow = p.locator('[role=button][aria-label*="Open in Investor Operations"]').first();
 const ovId = (await ovRow.getAttribute('aria-label')).split(' ')[0];
-check('Overview progress has Current / Upcoming sections', await p.evaluate(() => /Current tranches/.test(document.body.innerText) && /Upcoming tranches/.test(document.body.innerText)));
+check('Overview progress shows verdicts, no recently closed', await p.evaluate(() => /Upcoming/i.test(document.body.innerText) && /At risk/.test(document.body.innerText) && /at close|on pace to fill/.test(document.body.innerText) && !/Recently closed/i.test(document.body.innerText)));
 await ovRow.hover(); await p.waitForTimeout(200);
 check('Hovering a tranche shows the detail card', await p.getByRole('tooltip').filter({ hasText: 'Investor Operations' }).isVisible());
 await ovRow.click(); await p.waitForTimeout(700);
 check('Clicking a tranche opens no drawer', (await p.locator('[role=dialog]').count()) === 0);
 check('…and lands on Investor Operations with the row highlighted', await p.locator(`#sp-${ovId}`).evaluate((el) => el.className.includes('bg-accent-soft')), ovId);
 check('Allocation & minting tracker renders', await p.evaluate(() => /Allocation & minting/i.test(document.body.innerText) && /Release funds/i.test(document.body.innerText)));
+
+// Phone: Overview progress fits without sideways scrolling
+{
+  const m = await b.newPage({ viewport: { width: 390, height: 844 } });
+  await m.goto(BASE); await m.waitForTimeout(900);
+  check('Phone: no sideways overflow on Overview', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  const fits = await m.locator('[role=button][aria-label*="Open in Investor Operations"]').evaluateAll((els) => els.every((el) => { const r = el.getBoundingClientRect(); const c = el.closest('section').getBoundingClientRect(); return r.left >= c.left - 1 && r.right <= c.right + 1; }));
+  check('Phone: every tranche block fully visible in its card', fits);
+  await m.close();
+}
 
 // Finance: money view with redemptions, no operational risk filter
 await nav(/Finance/); await p.waitForTimeout(400);
