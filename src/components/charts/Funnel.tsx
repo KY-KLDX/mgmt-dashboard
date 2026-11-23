@@ -33,7 +33,7 @@ export function Funnel({ stages, selected, onSelect }: { stages: FunnelStage[]; 
                     className="group flex w-full items-center gap-2">
                     <span className="relative h-6 flex-1 overflow-hidden rounded bg-sunken">
                       <span className={`absolute inset-y-0 left-0 rounded transition-opacity ${active ? 'opacity-100' : 'opacity-85 group-hover:opacity-100'}`}
-                        style={{ width: `${(s.count / max) * 100}%`, background: 'var(--series-1)' }} />
+                        style={{ width: `${(s.count / max) * 100}%`, background: 'rgb(var(--accent))' }} />
                     </span>
                     <span className="num w-8 text-right font-semibold">{s.count}</span>
                   </button>

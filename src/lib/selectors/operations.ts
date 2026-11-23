@@ -1,10 +1,9 @@
 import { AS_OF, daysBetween, daysFromAsOf } from '../../data/asOf';
 import { ALLOCATIONS } from '../../data/allocations';
-import { SUBSCRIPTIONS, TRANSACTIONS } from '../../data/investors';
-import { PAYMENTS, type PaymentSpec } from '../../data/payments';
+import { SUBSCRIPTIONS } from '../../data/investors';
 import type { Thresholds } from '../../data/thresholds';
 import type { Tranche } from '../../data/types';
-import { allTrancheStats, trancheById, trancheStats, type TrancheStats } from './finance';
+import { allTrancheStats, trancheById, type TrancheStats } from './finance';
 
 /** Investors holding an allocated subscription in the tranche. */
 export const allocatedInvestors = (trancheId: string) =>
@@ -88,47 +87,4 @@ export function allocationTracker(): AllocationRow[] {
       blocker: a.blocker,
     };
   });
-}
-
-// ---- Redemptions & payments (finance view) -----------------------------------------------
-
-export interface PaymentRow extends PaymentSpec {
-  tranche: Tranche;
-  amountDue: number;
-  received: number;
-  investorsTotal: number;
-  investorsPaidCount: number;
-  status: 'Paid' | 'Due' | 'Scheduled';
-  /** Amount still missing from the issuer when the payment is due within 30 days. */
-  shortfall: number;
-}
-
-export function paymentsView(th: Thresholds): PaymentRow[] {
-  return PAYMENTS.map((p) => {
-    const tranche = trancheById(p.trancheId)!;
-    const successful = trancheStats(tranche, th).successful;
-    let amountDue: number;
-    if (p.type === 'Profit payment') {
-      amountDue = Math.round(successful * tranche.profitRate * 0.5);
-    } else if (p.investorsPaid === 'all') {
-      // Completed maturities: use what was actually paid out to investor wallets.
-      amountDue = TRANSACTIONS.filter((t) => t.type === 'Maturity return' && t.note?.startsWith(tranche.name)).reduce((a, t) => a + t.amount, 0);
-    } else {
-      amountDue = Math.round(successful * (1 + (tranche.profitRate * tranche.tenorMonths) / 12));
-    }
-    const received = Math.round(amountDue * p.issuerReceived);
-    const investorsTotal = allocatedInvestors(p.trancheId).length;
-    const investorsPaidCount = p.investorsPaid === 'all' ? investorsTotal : p.investorsPaid;
-    const d = daysFromAsOf(p.dueDate);
-    const status: PaymentRow['status'] = p.investorsPaid === 'all' ? 'Paid' : d <= 30 ? 'Due' : 'Scheduled';
-    return {
-      ...p, tranche, amountDue, received, investorsTotal, investorsPaidCount, status,
-      shortfall: status === 'Due' && received < amountDue ? amountDue - received : 0,
-    };
-  }).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-}
-
-/** Next profit or principal payment date for a tranche, if one is scheduled. */
-export function nextPaymentFor(trancheId: string, th: Thresholds): PaymentRow | null {
-  return paymentsView(th).find((p) => p.trancheId === trancheId && p.status !== 'Paid') ?? null;
 }

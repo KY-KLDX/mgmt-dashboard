@@ -1,8 +1,8 @@
-// Browser smoke test: inline header search, period control, notifications and the governance update flow.
+// Browser smoke test: search, period control, Overview → Investor Operations, Finance payment recording, sidebar, notifications and governance update.
 // Usage: start `npm run dev`, then `node scripts/smoke.mjs [baseUrl]`.
 import { chromium } from 'playwright-core';
 const BASE = process.argv[2] ?? 'http://127.0.0.1:5173/';
-const exe = process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';
+const exe = process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium_headless_shell';
 const b = await chromium.launch({ executablePath: exe });
 const p = await b.newPage({ viewport: { width: 1600, height: 1000 } });
 const errors = [];
@@ -87,12 +87,34 @@ check('Allocation & minting tracker renders', await p.evaluate(() => /Allocation
   await m.close();
 }
 
-// Finance: money view with redemptions, no operational risk filter
-await nav(/Finance/); await p.waitForTimeout(400);
-const finText = await p.evaluate(() => document.body.innerText);
-check('Finance shows Redemptions & payments with the shortfall', /Redemptions & payments/.test(finText) && /Shortfall RM\s?612,750/.test(finText));
-check('Finance tranche table has no risk filter', (await p.locator('#tr-risk').count()) === 0);
-check('Finance tranche table shows next payment due', /Next payment due/.test(finText));
+// Sidebar: 'Investor Operations' stays on one line when selected
+await nav(/Investor Operations/); await p.waitForTimeout(200);
+const navBtn = p.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: /Investor Operations/ });
+const lineH = await navBtn.evaluate((el) => { const s = el.querySelector('span.flex-1'); return { h: s.getBoundingClientRect().height, lh: parseFloat(getComputedStyle(s).lineHeight) }; });
+check('Sidebar: "Investor Operations" fits on one line when selected', lineH.h <= lineH.lh * 1.3, `${Math.round(lineH.h)}px`);
+
+// Finance: pipeline, tranche position, payment schedule recording
+await nav(/Finance/); await p.waitForTimeout(500);
+const pipe = p.locator('section', { has: p.locator('h2', { hasText: 'Tranche pipeline' }) });
+await pipe.getByText('Kilau Halal Foods Note 2').hover(); await p.waitForTimeout(150);
+check('Pipeline: hovering a tranche name shows its card (no drawer)', (await p.getByRole('tooltip').innerText()).includes('TR-2611') && (await p.locator('[role=dialog]').count()) === 0);
+await pipe.getByRole('button', { name: /Closed/ }).click(); await p.waitForTimeout(300);
+const pos = p.locator('#payments');
+check('Pipeline: clicking a stage filters the table', (await pos.locator('tbody > tr.cursor-pointer').count()) === 2);
+await pos.getByRole('button', { name: 'Clear stage filter' }).click(); await p.waitForTimeout(200);
+const mer = pos.locator('tbody > tr', { hasText: 'TR-2602' }).first();
+check('Tranche position: Meranti next action names the shortfall', /Chase issuer: RM 584,250 short on P2/.test(await mer.innerText()));
+const perm = pos.locator('tbody > tr', { hasText: 'TR-2615' }).first();
+check('Tranche position: Permata is not open yet and owes KLDX fees', /Not open yet/.test(await perm.innerText()) && /Owed RM 80,000/.test(await perm.innerText()));
+const sched = pos.locator('table').nth(1);
+const issuerP2 = sched.locator('tbody tr', { hasText: 'Issuer' }).filter({ hasText: 'P2' }).first();
+await issuerP2.getByRole('button', { name: /Record or edit/ }).click(); await p.waitForTimeout(100);
+await sched.getByLabel('Bank ref').fill(''); await sched.getByRole('button', { name: 'Save line' }).click(); await p.waitForTimeout(100);
+check('Schedule: saving without a bank ref is blocked', /bank \/ payment ref/i.test(await sched.getByRole('alert').innerText()));
+await sched.getByLabel('Total received').fill('3895000'); await sched.getByLabel('Bank ref').fill('MBB-261023-1111'); await p.keyboard.press('Enter'); await p.waitForTimeout(250);
+check('Schedule: recording the receipt moves the next action to paying investors', /Pay investors P2/.test(await mer.innerText()));
+await pos.getByRole('button', { name: 'Undo last change' }).click(); await p.waitForTimeout(250);
+check('Schedule: Undo restores the shortfall', /Chase issuer: RM 584,250 short on P2/.test(await mer.innerText()));
 
 // Notifications and governance close flow
 const attention = async () => Number((await p.getByRole('button', { name: /Notifications:/ }).getAttribute('aria-label')).match(/\d+/)[0]);

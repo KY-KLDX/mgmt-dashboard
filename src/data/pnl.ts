@@ -2,7 +2,7 @@ import type { PnlMonth } from './types';
 
 /*
  * Synthetic company-level month-end P&L (operating cost lines and budget only).
- * Revenue is NOT stored here: it is taken from tranche recognised revenue for the month,
+ * Revenue is NOT stored here: the Finance P&L shows all fees earned in the month (see lib/selectors/fees.ts),
  * so the P&L revenue line always reconciles to the tranche table. Costs are not allocated
  * to individual tranches, so no tranche-level profit is calculated anywhere.
  */
@@ -25,6 +25,14 @@ const ROWS: Row[] = [
   ['2026-10', 0, 0, 0, 0, 0, 0, 0, 0, 135_000, 4_250_000],
 ];
 
+/**
+ * Revenue now counts every fee type (distribution, application & DD, listing & custody, payment & service,
+ * delisting). The original synthetic budget covered distribution fees only, so it is scaled to the all-fee
+ * level: over the last 12 months all fees ran at about 2x distribution fees. Synthetic, rounded to RM 5,000.
+ */
+const ALL_FEE_BUDGET_FACTOR = 2;
+const allFeeBudget = (distributionBudget: number) => Math.round((distributionBudget * ALL_FEE_BUDGET_FACTOR) / 5_000) * 5_000;
+
 const BUDGET_OPEX = 228_000;
 const BUDGET_DA = 9_500;
 const BUDGET_FIN = 1_800;
@@ -40,10 +48,10 @@ export const PNL: PnlMonth[] = ROWS.map(([month, personnel, marketing, technolog
   depreciation,
   financeCosts,
   budget: {
-    revenue: bRev,
+    revenue: allFeeBudget(bRev),
     opex: BUDGET_OPEX,
-    ebitda: bRev - BUDGET_OPEX,
-    netResult: bRev - BUDGET_OPEX - BUDGET_DA - BUDGET_FIN,
+    ebitda: allFeeBudget(bRev) - BUDGET_OPEX,
+    netResult: allFeeBudget(bRev) - BUDGET_OPEX - BUDGET_DA - BUDGET_FIN,
     subscriptions: bSubs,
   },
 }));

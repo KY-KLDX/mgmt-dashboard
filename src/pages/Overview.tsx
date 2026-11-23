@@ -1,5 +1,5 @@
 import { AlertTriangle, CalendarDays, ChevronRight, Coins, ListChecks, Target, User, Users, UsersRound } from 'lucide-react';
-import { Fragment, useState } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { HeroKpi, Panel } from '../components/ui/Showcase';
 import { deltaAbs, deltaPct } from '../components/ui/KpiCard';
@@ -14,6 +14,7 @@ import { issuerShort, periodFinance, trendSeries } from '../lib/selectors/financ
 import { subscriptionProgress, type ProgressRow } from '../lib/selectors/operations';
 import { activeInvestors, allInvestorMetrics } from '../lib/selectors/investors';
 import { useApp } from '../state/AppState';
+import { feesByMonth, feesIn } from '../lib/selectors/fees';
 import { useFillHeight, useFitCount } from '../hooks/useFit';
 
 /** Alert titles without the trailing status words, which the due chip already shows. */
@@ -95,6 +96,59 @@ function ProgressBlock({ s, onOpen, onTip }: { s: ProgressRow; onOpen: (id: stri
   );
 }
 
+const DOT: Record<string, string> = { Filled: 'bg-good', 'On pace': 'bg-accent', 'Close call': 'bg-warn', 'At risk': 'bg-crit' };
+
+/** Next-30-days timeline of close dates (live) and open dates (upcoming). Shown only when the card has room for it. */
+function CloseTimeline({ live, upcoming, onOpen }: { live: ProgressRow[]; upcoming: ProgressRow[]; onOpen: (id: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [show, setShow] = useState(true);
+  useLayoutEffect(() => {
+    const box = ref.current?.parentElement;
+    if (!box) return;
+    // When the card has room, the timeline replaces the one-line Upcoming list (it shows the opening date too).
+    const check = () => {
+      if (!ref.current) return;
+      const up = box.querySelector<HTMLElement>('[data-upcoming]');
+      ref.current.style.display = '';
+      if (up) up.style.display = 'none';
+      const fits = box.scrollHeight <= box.clientHeight + 1;
+      ref.current.style.display = fits ? '' : 'none';
+      if (up) up.style.display = fits ? 'none' : '';
+      setShow(fits);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, []);
+  const SPAN = 30;
+  const pos = (d: string) => `${Math.min(100, Math.max(0, (daysFromAsOf(d) / SPAN) * 100))}%`;
+  const points = [
+    ...live.map((s) => ({ id: s.tranche.id, d: s.tranche.closeDate, label: `${s.tranche.id} closes`, cls: DOT[s.verdict ?? 'On pace'], hollow: false })),
+    ...upcoming.map((s) => ({ id: s.tranche.id, d: s.tranche.openDate, label: `${s.tranche.id} opens`, cls: 'border-2 border-ink-3 bg-surface', hollow: true })),
+  ].filter((p) => daysFromAsOf(p.d) <= SPAN).sort((a, b) => a.d.localeCompare(b.d));
+  return (
+    <div ref={ref} aria-hidden={!show} className="mt-2 border-t border-line pt-2.5">
+      <div className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-3">Next 30 days</div>
+      <div className="relative mx-3 h-[34px]">
+        <div className="absolute inset-x-0 top-[12px] h-0.5 rounded bg-line" />
+        {[0, 7, 14, 21, 28].map((d) => (
+          <span key={d} className="absolute top-[20px] -translate-x-1/2 text-[10px] text-ink-3" style={{ left: `${(d / SPAN) * 100}%` }}>{d === 0 ? 'Today' : `+${d}d`}</span>
+        ))}
+        {points.map((p, i) => (
+          <button key={p.label} onClick={() => onOpen(p.id)} title={`${p.label} ${date(p.d)}`} aria-label={`${p.label} ${date(p.d)}`}
+            className={`absolute top-[4px] grid h-[18px] w-[18px] -translate-x-1/2 place-items-center rounded-full text-[10px] font-bold ring-2 ring-surface ${p.hollow ? 'border-2 border-ink-3 bg-surface text-ink-2' : `${p.cls} text-white`}`} style={{ left: pos(p.d) }}>{i + 1}</button>
+        ))}
+      </div>
+      <ol className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11.5px] text-ink-2">
+        {points.map((p, i) => (
+          <li key={p.label}><button onClick={() => onOpen(p.id)} className="hover:text-ink"><span className="font-semibold text-ink">{i + 1}</span> {p.id} {p.hollow ? 'opens' : 'closes'} <span className="num text-ink-3">{dateShort(p.d)}</span></button></li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function DueChip({ a }: { a: Alert }) {
   if (!a.date) return <span className="inline-flex items-center gap-1.5 rounded-lg bg-warn-soft px-3 py-1.5 text-[13px] font-semibold text-warn"><AlertTriangle size={15} aria-hidden />Action needed</span>;
   const d = daysFromAsOf(a.date);
@@ -120,6 +174,8 @@ export function OverviewPage() {
   const cl = period.compare ? `vs ${period.compare.label.replace(/^same point in /, '').replace(/^(\w{3})\w* (\d{4})$/, '$1 $2')}` : 'vs budget';
 
   const at = period.end < AS_OF ? period.end : AS_OF;
+  const feeRev = feesIn(thresholds, period.start, at);
+  const feeRevCmp = period.compare ? feesIn(thresholds, period.compare.start, period.compare.end) : null;
   const cmp = compareDate(period);
   const act = activeInvestors(at);
   const recent = TREND_MONTHS.slice(-7);
@@ -157,10 +213,10 @@ export function OverviewPage() {
           delta={cmpFin ? deltaPct(fin.successful, cmpFin.successful, cl) : deltaPct(fin.successful, budgetSubs, 'vs budget')}
           spark={trend.slice(-7).map((t) => t.subs)} onClick={() => navigate({ page: 'finance' })}
           info={`Successful subscriptions in tranches closed ${period.label}. Budget ${rmShort(budgetSubs)}.`} />
-        <HeroKpi icon={Coins} tone="teal" label="Revenue" value={rmShort(fin.revenue)}
-          delta={cmpFin ? deltaPct(fin.revenue, cmpFin.revenue, cl) : deltaPct(fin.revenue, budgetRev, 'vs budget')}
-          spark={trend.slice(-7).map((t) => t.revenue)} onClick={() => navigate({ page: 'finance' })}
-          info={`Recognised revenue: successful subscription × tranche fee rate. Budget ${rmShort(budgetRev)}.`} />
+        <HeroKpi icon={Coins} tone="teal" label="Revenue" value={rmShort(feeRev)}
+          delta={feeRevCmp !== null ? deltaPct(feeRev, feeRevCmp, cl) : deltaPct(feeRev, budgetRev, 'vs budget')}
+          spark={feesByMonth(thresholds, TREND_MONTHS.slice(-7)).map((m) => m.total as number)} onClick={() => navigate({ page: 'finance' })}
+          info="All fee types earned: distribution, application & legal DD, listing & custody, payment & service, delisting." />
         <HeroKpi icon={UsersRound} tone="violet" label="Active investors" value={int(act.length)}
           delta={deltaAbs(act.length, activeInvestors(cmp.at).length, period.compare ? cl : cmp.label, true)}
           spark={investorSpark} onClick={() => navigate({ page: 'investors' })}
@@ -176,7 +232,7 @@ export function OverviewPage() {
                 {current.map((s) => <ProgressBlock key={s.tranche.id} s={s} onOpen={openInOps} onTip={setTip} />)}
               </ul>
               {upcoming.length > 0 && (
-                <ul data-fit className="mt-1 border-t border-line pt-1.5" aria-label="Upcoming tranches">
+                <ul data-fit data-upcoming className="mt-1 border-t border-line pt-1.5" aria-label="Upcoming tranches">
                   {upcoming.map((s) => (
                     <li key={s.tranche.id}>
                       <button onClick={() => openInOps(s.tranche.id)} aria-label={`${s.tranche.id} ${s.tranche.name}: opens ${date(s.tranche.openDate)}. Open in Investor Operations.`}
@@ -190,6 +246,7 @@ export function OverviewPage() {
                   ))}
                 </ul>
               )}
+              <CloseTimeline live={current} upcoming={upcoming} onOpen={openInOps} />
             </div>
             {tip && <TrancheHoverCard row={tip.row} x={tip.x} y={tip.y} />}
           </Panel>

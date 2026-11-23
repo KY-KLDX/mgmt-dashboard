@@ -100,7 +100,7 @@ export function PnlTrend({ data, height = 220, metric = 'ebitda' }: { data: Tren
   return (
     <div className="space-y-2">
       <LegendRow items={[
-        { label: 'Recognised revenue (tranche-derived)', color: SERIES.s2 },
+        { label: 'Revenue (all fees)', color: SERIES.s2 },
         { label: 'Operating expenses (company P&L)', color: SERIES.s3 },
         { label: `${label} (company P&L)`, color: SERIES.s1 },
       ]} />

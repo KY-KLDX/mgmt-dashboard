@@ -18,8 +18,9 @@ import { allTrancheStats, closedPnl, monthlyRevenue, periodFinance } from '../sr
 import { activeInvestors, allInvestorMetrics, bands, funnel, isCtosIncomplete, isKycIncomplete } from '../src/lib/selectors/investors';
 import { govOpen, govOverdue, obligationOverdue } from '../src/lib/selectors/ops';
 import { buildPeriod } from '../src/lib/period';
-import { allocationTracker, paymentsView, subscriptionProgress } from '../src/lib/selectors/operations';
-import { daysFromAsOf } from '../src/data/asOf';
+import { allocationTracker, subscriptionProgress } from '../src/lib/selectors/operations';
+import { feeEvents, feeInvoices, feesIn, invoiceState, stepState, workflow } from '../src/lib/selectors/fees';
+import { PNL } from '../src/data/pnl';
 
 const th = DEFAULT_THRESHOLDS;
 let failures = 0;
@@ -109,11 +110,28 @@ check('Only High risk needs review, and every High is pending or cleared', risks
 // Privacy: no investor names are held in the dashboard data
 check('Investors carry ID and initials only (no name field)', INVESTORS.every((i) => !('name' in i) && /^[A-Z]{1,6}$/.test(i.initials)));
 
-// Investor Operations and Finance payments
-const pays = paymentsView(th);
-check('Issuer funds received never exceed the amount due', pays.every((p) => p.received <= p.amountDue));
-check('Shortfall = due − received, only when due within 30 days', pays.every((p) => p.shortfall === (p.status === 'Due' ? p.amountDue - p.received : 0) && (p.shortfall === 0 || daysFromAsOf(p.dueDate) <= 30)));
-check('Paid payments: issuer paid in full and every investor repaid', pays.filter((p) => p.status === 'Paid').every((p) => p.received === p.amountDue && p.investorsPaidCount === p.investorsTotal));
+// Finance: fee model, payment schedule and invoices
+const fees = feeEvents(th);
+const { invoices, unbilled } = feeInvoices(th);
+const earnedAll = fees.reduce((a, e) => a + e.amount, 0);
+const invoicedAll = invoices.reduce((a, i) => a + i.amount, 0);
+const unbilledAll = [...unbilled.values()].reduce((a, v) => a + v, 0);
+check('Fees earned = invoiced + unbilled (rounding < RM 10)', Math.abs(earnedAll - invoicedAll - unbilledAll) < 10, `${earnedAll} vs ${invoicedAll} + ${Math.round(unbilledAll)}`);
+check('No fee event after the reporting date', fees.every((e) => e.date <= AS_OF));
+const invStates = invoices.map((i) => invoiceState(i));
+check('No fee receipt predates its invoice or follows the reporting date', invStates.every((x) => !x.paid || (x.paid.date >= x.inv.date && x.paid.date <= AS_OF)));
+check('Distribution and service fees are deducted at source, not invoiced', invStates.filter((x) => /Distribution|Service/.test(x.inv.fee)).every((x) => x.status === 'Deducted'));
+check('Distribution fee events equal recognised revenue (successful × fee rate)', fees.filter((e) => e.group === 'distribution').reduce((a, e) => a + e.amount, 0) === allTrancheStats(th).filter((s) => ['Closed', 'Issued / Settled', 'Matured'].includes(s.tranche.stage)).reduce((a, s) => a + s.revenue, 0));
+const octFees = feesIn(th, '2026-10-01', AS_OF);
+check('Revenue card (all fees, Oct to date) equals the sum of fee events', octFees === fees.filter((e) => e.date >= '2026-10-01').reduce((a, e) => a + e.amount, 0), `RM ${octFees}`);
+const released = new Map(allocationTracker().map((r) => [r.tranche.id, r.releasedOn]));
+const flows = allTrancheStats(th).map((s) => ({ s, steps: workflow(s, released.get(s.tranche.id) ?? null).map((st) => stepState(st)) }));
+check('Every payment due before the reporting date is complete', flows.every((f) => f.steps.every((x) => x.step.kind === 'delist' || x.step.due >= AS_OF || x.done)));
+const shortSteps = flows.flatMap((f) => f.steps.filter((x) => x.step.kind === 'issuer' && !x.done && x.received > 0));
+check('Shortfall example: Meranti Note 1 issuer payment part-received', shortSteps.some((x) => x.step.key.startsWith('TR-2602') && (x.step.amount ?? 0) - x.received === 584_250), shortSteps.map((x) => `${x.step.key} short ${(x.step.amount ?? 0) - x.received}`).join(', '));
+check('Issuer receipts never exceed the amount due', flows.every((f) => f.steps.every((x) => x.step.kind !== 'issuer' || x.received <= (x.step.amount ?? 0))));
+const budgetSep = PNL.find((m) => m.month === '2026-09')!.budget;
+check('P&L revenue budget is on the all-fee basis (≥ 2× distribution budget scale)', budgetSep.revenue === 260_000 && budgetSep.ebitda === budgetSep.revenue - budgetSep.opex, `Sep budget RM ${budgetSep.revenue}`);
 const alloc = allocationTracker();
 check('Allocated ≤ investors on every tracked tranche', alloc.every((r) => r.allocated <= r.investors), alloc.map((r) => `${r.tranche.id} ${r.allocated}/${r.investors}`).join(', '));
 check('Funds released only after allocation completes', alloc.every((r) => r.steps.release !== 'done' || r.steps.allocate === 'done'));
@@ -127,7 +145,6 @@ check('Verdict follows thresholds (filled / ≥100% / ≥80% / below)', live.fil
   const want = r.raised >= t ? 'Filled' : r.risk === 'Critical' ? 'At risk' : p >= 1 ? 'On pace' : p >= 0.8 ? 'Close call' : 'At risk';
   return r.verdict === want;
 }), live.filter((r) => r.verdict).map((r) => `${r.tranche.id} ${r.verdict}`).join(', '));
-check('Shortfall example: one payment short', pays.filter((p) => p.shortfall > 0).length >= 1, pays.filter((p) => p.shortfall > 0).map((p) => `${p.id} ${p.shortfall}`).join(', '));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

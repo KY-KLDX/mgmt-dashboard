@@ -77,10 +77,10 @@ export function InvestorsPage() {
           delta={deltaAbs(act.length, actPrev.length, period.compare ? subsLabel : cmp.label, true)}
           info="Investors with at least one current subscription. Same card as the Executive Overview." onClick={() => showList('group:active')} />
         <HeroKpi compact icon={UserRoundCog} tone="amber" label="Onboarding incomplete" value={int(incomplete)} spark={bars.incomplete}
-          delta={deltaAbs(incomplete, incompleteAt(cmp.at), cmp.label, false)}
+          delta={deltaAbs(incomplete, incompleteAt(cmp.at), period.compare ? subsLabel : cmp.label, false)}
           info="Investors waiting on CTOS or KYC." onClick={() => showList('onboarding')} />
         <HeroKpi compact icon={CreditCard} tone="red" label="Failed top-ups" value={int(activity.failed.length)} spark={bars.failed}
-          delta={prevActivity ? deltaAbs(activity.failed.length, prevActivity.failed.length, period.compare!.short, false) : undefined}
+          delta={prevActivity ? deltaAbs(activity.failed.length, prevActivity.failed.length, subsLabel, false) : undefined}
           info={`${rm(activity.failedAmount)} failed in ${period.label}. Pending top-ups are excluded.`}
           onClick={() => showList('exception:failed')} />
       </div>

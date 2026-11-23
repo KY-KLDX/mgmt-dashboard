@@ -13,7 +13,7 @@ const AREA: Partial<Record<PageKey, Area>> = {
 export function Sidebar() {
   const { page, navigate, alerts, navCollapsed: c, dispatch } = useApp();
   return (
-    <nav aria-label="Primary" className={`flex h-full shrink-0 flex-col bg-rail text-rail-ink transition-[width] duration-200 ${c ? 'w-[72px]' : 'w-[232px]'}`}>
+    <nav aria-label="Primary" className={`flex h-full shrink-0 flex-col bg-rail text-rail-ink transition-[width] duration-200 ${c ? 'w-[72px]' : 'w-[252px]'}`}>
       <div className={`flex items-start pb-7 pt-6 ${c ? 'flex-col items-center gap-3 px-2' : 'justify-between px-5'}`}>
         <div className={c ? 'text-center' : ''}>
           <div className={`font-display font-semibold leading-none tracking-tight ${c ? 'text-[17px]' : 'text-[24px]'}`}>KLDX</div>
@@ -41,7 +41,7 @@ export function Sidebar() {
                   <Icon size={18} strokeWidth={active ? 2.25 : 1.75} className={active ? 'text-rail-accent' : 'text-rail-muted'} aria-hidden />
                   {c && n > 0 && <span className={`absolute -right-1.5 -top-1 h-2 w-2 rounded-full ${crit ? 'bg-crit' : 'bg-warn'}`} aria-hidden />}
                 </span>
-                {!c && <span className="flex-1 leading-tight">{p.label}</span>}
+                {!c && <span className="flex-1 whitespace-nowrap leading-tight">{p.label}</span>}
                 {!c && n > 0 && (
                   <span className={`num grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10.5px] font-semibold text-white ${crit ? 'bg-crit' : 'bg-warn'}`} title={`${n} ${crit ? 'critical' : 'high'} alerts`}>
                     {n}<span className="sr-only"> {crit ? 'critical' : 'high'}</span>

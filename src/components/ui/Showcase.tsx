@@ -60,9 +60,8 @@ export function Panel({ icon: Icon, title, children, iconTile, info, actions }: 
   return (
     <section className="card flex h-full min-w-0 flex-col overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center gap-3 px-6 pb-3 pt-5">
-        {iconTile
-          ? <span className={`grid h-10 w-10 place-items-center rounded-xl ${TILE[iconTile].tile}`}><Icon size={20} aria-hidden /></span>
-          : <Icon size={24} className="text-ink" aria-hidden />}
+        {/* One panel-title style everywhere; tinted tiles are reserved for the KPI cards. */}
+        <Icon size={24} className={iconTile === 'red' ? 'text-crit' : 'text-ink'} aria-hidden />
         <h2 className="font-display text-[21px] font-semibold tracking-tight">{title}</h2>
         {info && <InfoTip text={info} label={`About ${title}`} wide />}
         {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
